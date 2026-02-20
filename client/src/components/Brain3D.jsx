@@ -165,7 +165,7 @@ const SensorHighlights = ({ activeSensor }) => (
       const active = sensor === activeSensor;
       return (
         <mesh key={sensor} position={[pos.x, pos.y, pos.z]}>
-          <sphereGeometry args={[sensor.includes('hand') ? 0.03 : 0.02, 12, 12]} />
+          <sphereGeometry args={[(sensor.includes('hand') || sensor.includes('leg')) ? 0.03 : 0.02, 12, 12]} />
           <meshStandardMaterial
             color={active ? '#E5B94E' : '#B8AFA0'}
             transparent
@@ -229,13 +229,23 @@ const PeripheralNervousSystem = ({ visible, activeSensor }) => {
   const activeKey = activeSensor || '';
   const isRightArm = activeKey === 'right_hand';
   const isLeftArm = activeKey === 'left_hand';
+  const isRightLeg = activeKey === 'right_leg';
+  const isLeftLeg = activeKey === 'left_leg';
+  const hasBodySignal = isRightArm || isLeftArm || isRightLeg || isLeftLeg;
+
+  const armNerves = ['medianNerve', 'ulnarNerve', 'radialNerve'];
+  const legNerves = ['sciaticNerve', 'tibialNerve', 'peronealNerve', 'femoralNerve', 'obturatorNerve'];
 
   return (
     <group>
       {Object.entries(NERVE_ANATOMY).map(([key, nerve]) => {
+        const isCentral = key === 'spinalCord' || key === 'brainstem' || key === 'conusMedullaris';
         const isOnActivePath =
-          (isRightArm && (key.endsWith('_R') || key === 'spinalCord' || key === 'brainstem')) ||
-          (isLeftArm && (key.endsWith('_L') || key === 'spinalCord' || key === 'brainstem'));
+          (hasBodySignal && isCentral) ||
+          (isRightArm && key.endsWith('_R') && (key.startsWith('root') || armNerves.some((n) => key.startsWith(n)))) ||
+          (isLeftArm  && key.endsWith('_L') && (key.startsWith('root') || armNerves.some((n) => key.startsWith(n)))) ||
+          (isRightLeg && key.endsWith('_R') && (legNerves.some((n) => key.startsWith(n)) || key.startsWith('caudaEquina'))) ||
+          (isLeftLeg  && key.endsWith('_L') && (legNerves.some((n) => key.startsWith(n)) || key.startsWith('caudaEquina')));
 
         return (
           <NerveTube
@@ -389,13 +399,29 @@ const SignalPulse = ({ impulse }) => {
   useEffect(() => {
     if (!curve) return;
     prog.current.value = 0;
-    const tw = gsap.to(prog.current, {
-      value: 1,
-      duration: impulse.duration / 1000,
-      delay: (impulse.delay || 0) / 1000,
-      ease: 'none',
-    });
-    return () => tw.kill();
+
+    const totalDur = impulse.duration / 1000;
+    const initDelay = (impulse.delay || 0) / 1000;
+    const sp = impulse.spinalProgress || 0;
+    const bp = impulse.brainProgress || 0;
+    const hasBioDelays = sp > 0 && bp > 0;
+
+    if (!hasBioDelays) {
+      /* Head sensors — simple linear tween */
+      const tw = gsap.to(prog.current, { value: 1, duration: totalDur, delay: initDelay, ease: 'none' });
+      return () => tw.kill();
+    }
+
+    /* Body sensors — GSAP timeline with biological synapse pauses */
+    const spDelay = (impulse.spinalDelay || 0) / 1000;
+    const cxDelay = (impulse.cortexDelay || 0) / 1000;
+    const tl = gsap.timeline({ delay: initDelay });
+    tl.to(prog.current, { value: sp, duration: totalDur * sp, ease: 'none' });
+    if (spDelay > 0) tl.to({}, { duration: spDelay });                        // synapse pause at spinal cord
+    tl.to(prog.current, { value: bp, duration: totalDur * (bp - sp), ease: 'none' });
+    if (cxDelay > 0) tl.to({}, { duration: cxDelay });                        // cortical processing pause
+    tl.to(prog.current, { value: 1, duration: totalDur * (1 - bp), ease: 'none' });
+    return () => tl.kill();
   }, [curve, impulse.duration, impulse.delay, impulse.id]);
 
   useFrame(() => {
@@ -497,7 +523,7 @@ const CameraRig = ({ controlsRef, activeLobe, resetTrigger }) => {
     const dest = activeLobe ? FOCUS[activeLobe] : null;
     const t = dest?.target || DEFAULT_TARGET;
     const c = dest?.cam || DEFAULT_CAM;
-    const dur = activeLobe ? 1.1 : 1.2;
+    const dur = activeLobe ? 1.5 : 1.2;
     const tw1 = gsap.to(controlsRef.current.target, { ...t, duration: dur, ease: 'power2.out', onUpdate: () => controlsRef.current?.update() });
     const tw2 = gsap.to(camera.position, { ...c, duration: dur, ease: 'power2.out', onUpdate: () => controlsRef.current?.update() });
     return () => { tw1.kill(); tw2.kill(); };

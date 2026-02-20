@@ -66,6 +66,24 @@ export const BRAIN_MAPPING = {
     description:
       'Dorsolateral prefrontal cortex — executive functions including planning, working memory, and cognitive flexibility.',
   },
+  right_leg: {
+    name: 'Left Paracentral Lobule',
+    lobe: 'Left Motor Cortex (Leg Area)',
+    lobeId: 'motor_left',
+    hemisphere: 'left',
+    color: LOBE_COLORS.motor,
+    description:
+      'Paracentral lobule — medial surface of primary motor cortex (M1) controlling voluntary movement of the contralateral (right) lower extremity via the lateral corticospinal tract.',
+  },
+  left_leg: {
+    name: 'Right Paracentral Lobule',
+    lobe: 'Right Motor Cortex (Leg Area)',
+    lobeId: 'motor_right',
+    hemisphere: 'right',
+    color: LOBE_COLORS.motor,
+    description:
+      'Paracentral lobule — medial surface of primary motor cortex (M1) controlling voluntary movement of the contralateral (left) lower extremity via the lateral corticospinal tract.',
+  },
 };
 
 /* ═══════════════════ Sensor Positions (A-pose body — Sketchfab basemesh) ═══════════════════ */
@@ -76,6 +94,8 @@ export const SENSOR_POSITIONS = {
   ear:        { x: -0.12, y: 1.45, z: 0.0 },
   mouth:      { x: 0.0, y: 1.36, z: 0.11 },
   forehead:   { x: 0.0, y: 1.62, z: 0.11 },
+  right_leg:  { x: 0.26, y: -0.98, z: 0.11 },
+  left_leg:   { x: -0.26, y: -0.98, z: 0.11 },
 };
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -173,6 +193,74 @@ export const NERVE_PATHWAYS = {
     { x: 0.00, y: 1.52, z: 0.06 },
     { x: 0.00, y: 1.51, z: 0.08 },
   ],
+  /* ── Right leg → Left motor cortex (Paracentral lobule)
+     Digital nn. → Tibial n. → Sciatic n. → Sacral plexus → Cauda equina →
+     Conus medullaris → Dorsal column → Medulla decussation → Left paracentral lobule ── */
+  right_leg: [
+    { x: 0.26, y: -0.98, z: 0.11 },   // toes
+    { x: 0.25, y: -0.94, z: 0.08 },   // dorsum of foot
+    { x: 0.24, y: -0.88, z: 0.03 },   // ankle (tarsal tunnel)
+    { x: 0.23, y: -0.80, z: -0.02 },  // lower calf
+    { x: 0.22, y: -0.72, z: -0.06 },  // mid calf
+    { x: 0.21, y: -0.64, z: -0.10 },  // upper calf
+    { x: 0.21, y: -0.56, z: -0.13 },  // popliteal fossa (behind knee)
+    { x: 0.20, y: -0.48, z: -0.14 },  // lower thigh
+    { x: 0.20, y: -0.40, z: -0.14 },  // mid thigh (sciatic nerve)
+    { x: 0.20, y: -0.32, z: -0.12 },  // upper thigh
+    { x: 0.19, y: -0.24, z: -0.10 },  // proximal thigh
+    { x: 0.16, y: -0.16, z: -0.07 },  // gluteal region
+    { x: 0.12, y: -0.08, z: -0.05 },  // sacral plexus (L4-S3)
+    { x: 0.08, y: 0.00, z: -0.04 },   // lumbosacral trunk
+    { x: 0.04, y: 0.10, z: -0.03 },   // cauda equina root (L3-L4)
+    { x: 0.02, y: 0.22, z: -0.03 },   // ascending cauda equina
+    { x: 0.00, y: 0.35, z: -0.03 },   // conus medullaris — SPINAL CORD ENTRY
+    { x: 0.00, y: 0.50, z: -0.03 },   // lower thoracic cord (T12)
+    { x: 0.00, y: 0.65, z: -0.03 },   // mid thoracic cord (T8)
+    { x: 0.00, y: 0.80, z: -0.03 },   // upper thoracic cord (T4)
+    { x: 0.00, y: 0.95, z: -0.03 },   // lower cervical cord (C7)
+    { x: 0.00, y: 1.10, z: -0.03 },   // cervical cord (C4)
+    { x: 0.00, y: 1.27, z: -0.03 },   // cervicomedullary junction
+    { x: 0.00, y: 1.33, z: -0.03 },   // lower medulla
+    { x: 0.00, y: 1.38, z: -0.02 },   // medulla oblongata — BRAIN ENTRY
+    { x: -0.01, y: 1.42, z: -0.01 },  // DECUSSATION (pyramidal)
+    { x: -0.02, y: 1.46, z: 0.00 },   // contralateral midbrain
+    { x: -0.03, y: 1.50, z: 0.00 },   // thalamus (VPL nucleus)
+    { x: -0.04, y: 1.54, z: -0.01 },  // corona radiata
+    { x: -0.04, y: 1.58, z: 0.00 },   // left paracentral lobule (leg area M1)
+  ],
+  /* ── Left leg → Right motor cortex (mirror) ── */
+  left_leg: [
+    { x: -0.26, y: -0.98, z: 0.11 },
+    { x: -0.25, y: -0.94, z: 0.08 },
+    { x: -0.24, y: -0.88, z: 0.03 },
+    { x: -0.23, y: -0.80, z: -0.02 },
+    { x: -0.22, y: -0.72, z: -0.06 },
+    { x: -0.21, y: -0.64, z: -0.10 },
+    { x: -0.21, y: -0.56, z: -0.13 },
+    { x: -0.20, y: -0.48, z: -0.14 },
+    { x: -0.20, y: -0.40, z: -0.14 },
+    { x: -0.20, y: -0.32, z: -0.12 },
+    { x: -0.19, y: -0.24, z: -0.10 },
+    { x: -0.16, y: -0.16, z: -0.07 },
+    { x: -0.12, y: -0.08, z: -0.05 },
+    { x: -0.08, y: 0.00, z: -0.04 },
+    { x: -0.04, y: 0.10, z: -0.03 },
+    { x: -0.02, y: 0.22, z: -0.03 },
+    { x: 0.00, y: 0.35, z: -0.03 },
+    { x: 0.00, y: 0.50, z: -0.03 },
+    { x: 0.00, y: 0.65, z: -0.03 },
+    { x: 0.00, y: 0.80, z: -0.03 },
+    { x: 0.00, y: 0.95, z: -0.03 },
+    { x: 0.00, y: 1.10, z: -0.03 },
+    { x: 0.00, y: 1.27, z: -0.03 },
+    { x: 0.00, y: 1.33, z: -0.03 },
+    { x: 0.00, y: 1.38, z: -0.02 },
+    { x: 0.01, y: 1.42, z: -0.01 },
+    { x: 0.02, y: 1.46, z: 0.00 },
+    { x: 0.03, y: 1.50, z: 0.00 },
+    { x: 0.04, y: 1.54, z: -0.01 },
+    { x: 0.04, y: 1.58, z: 0.00 },
+  ],
 };
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -183,13 +271,32 @@ export const NERVE_PATHWAYS = {
 export const NERVE_ANATOMY = {
   /* ── Central ── */
   spinalCord: {
-    path: [[0,1.27,-0.03],[0,1.20,-0.03],[0,1.10,-0.03],[0,0.95,-0.03],[0,0.75,-0.03],[0,0.55,-0.03],[0,0.35,-0.03],[0,0.15,-0.03],[0,0.00,-0.03],[0,-0.05,-0.03]],
+    path: [[0,1.27,-0.03],[0,1.20,-0.03],[0,1.10,-0.03],[0,0.95,-0.03],[0,0.75,-0.03],[0,0.55,-0.03],[0,0.38,-0.03],[0,0.35,-0.03]],
     radius: 0.007,
+    label: 'Spinal Cord (C1–L1)',
   },
   brainstem: {
     path: [[0,1.27,-0.03],[0,1.31,-0.025],[0,1.36,-0.015],[0,1.41,-0.005],[0,1.45,0.0]],
     radius: 0.006,
   },
+  /* ── Conus Medullaris (tapered end of spinal cord at L1-L2) ── */
+  conusMedullaris: {
+    path: [[0,0.38,-0.03],[0,0.35,-0.03],[0,0.33,-0.035]],
+    radius: 0.005,
+  },
+  /* ── Cauda Equina (horse-tail nerve roots below conus, L2–S5) ── */
+  caudaEquina_L2_R: { path: [[0,0.35,-0.03],[0.02,0.28,-0.030],[0.04,0.20,-0.028],[0.06,0.12,-0.020]], radius: 0.002 },
+  caudaEquina_L3_R: { path: [[0,0.35,-0.03],[0.03,0.26,-0.032],[0.05,0.16,-0.030],[0.07,0.06,-0.025]], radius: 0.002 },
+  caudaEquina_L4_R: { path: [[0,0.35,-0.03],[0.04,0.24,-0.035],[0.06,0.12,-0.035],[0.08,0.00,-0.030]], radius: 0.002 },
+  caudaEquina_L5_R: { path: [[0,0.35,-0.03],[0.04,0.22,-0.038],[0.07,0.08,-0.040],[0.09,-0.04,-0.038]], radius: 0.002 },
+  caudaEquina_S1_R: { path: [[0,0.35,-0.03],[0.03,0.20,-0.040],[0.06,0.04,-0.042],[0.09,-0.06,-0.040]], radius: 0.0018 },
+  caudaEquina_S2_R: { path: [[0,0.35,-0.03],[0.02,0.18,-0.042],[0.04,0.02,-0.045],[0.07,-0.06,-0.042]], radius: 0.0018 },
+  caudaEquina_L2_L: { path: [[0,0.35,-0.03],[-0.02,0.28,-0.030],[-0.04,0.20,-0.028],[-0.06,0.12,-0.020]], radius: 0.002 },
+  caudaEquina_L3_L: { path: [[0,0.35,-0.03],[-0.03,0.26,-0.032],[-0.05,0.16,-0.030],[-0.07,0.06,-0.025]], radius: 0.002 },
+  caudaEquina_L4_L: { path: [[0,0.35,-0.03],[-0.04,0.24,-0.035],[-0.06,0.12,-0.035],[-0.08,0.00,-0.030]], radius: 0.002 },
+  caudaEquina_L5_L: { path: [[0,0.35,-0.03],[-0.04,0.22,-0.038],[-0.07,0.08,-0.040],[-0.09,-0.04,-0.038]], radius: 0.002 },
+  caudaEquina_S1_L: { path: [[0,0.35,-0.03],[-0.03,0.20,-0.040],[-0.06,0.04,-0.042],[-0.09,-0.06,-0.040]], radius: 0.0018 },
+  caudaEquina_S2_L: { path: [[0,0.35,-0.03],[-0.02,0.18,-0.042],[-0.04,0.02,-0.045],[-0.07,-0.06,-0.042]], radius: 0.0018 },
 
   /* ── Right Brachial Plexus Roots (C5-T1) ── */
   rootC5_R: { path: [[0,1.12,-0.03],[0.07,1.115,-0.02],[0.16,1.11,-0.01],[0.25,1.09,0.0]], radius: 0.0025 },
@@ -336,8 +443,28 @@ const useStore = create((set, get) => ({
     if (!mapping) return;
     const pathway = NERVE_PATHWAYS[sensor] || [];
     const speed = get().neuralSpeed;
-    const baseDuration = 1500 / speed;
-    const baseDelay = 300 / speed;
+
+    /* Slow-motion durations scaled by pathway length */
+    const isLeg = sensor.includes('leg');
+    const isHand = sensor.includes('hand');
+    const baseDuration = isLeg ? 2500 / speed : isHand ? 2200 / speed : 1500 / speed;
+    const baseDelay = 100 / speed;
+
+    /* Biological synapse delays (ms) at spinal cord entry and brainstem */
+    const spinalDelay = (isLeg || isHand) ? 300 / speed : 0;
+    const cortexDelay = (isLeg || isHand) ? 300 / speed : 0;
+
+    /* Normalized progress markers along the CatmullRomCurve3 */
+    const spinalProgress = isLeg ? 0.48 : isHand ? 0.55 : 0;
+    const brainProgress  = isLeg ? 0.82 : isHand ? 0.80 : 0;
+
+    /* Time (ms) when signal arrives at the brain — triggers delayed camera zoom */
+    const brainArrivalTime = (isLeg || isHand)
+      ? baseDuration * brainProgress + spinalDelay + baseDelay
+      : baseDelay + 200;
+
+    /* Total wall-clock time including biological delays */
+    const totalTime = baseDuration + spinalDelay + cortexDelay + baseDelay;
 
     const impulse = {
       id: `${Date.now()}-impulse`,
@@ -347,6 +474,8 @@ const useStore = create((set, get) => ({
       duration: baseDuration,
       delay: baseDelay,
       intensity: intensity || 1.0,
+      spinalDelay, cortexDelay,
+      spinalProgress, brainProgress,
     };
 
     set((s) => ({
@@ -362,6 +491,7 @@ const useStore = create((set, get) => ({
       ],
     }));
 
+    /* Delayed brain region activation — camera zooms in after signal reaches cortex */
     setTimeout(() => {
       set((s) => {
         if (s.activeSensor !== sensor) return {};
@@ -372,15 +502,17 @@ const useStore = create((set, get) => ({
           infoContent: { lobe: mapping.lobe, description: mapping.description, color: mapping.color, sensor, pathwayLength: pathway.length },
         };
       });
-    }, baseDelay);
+    }, brainArrivalTime);
 
+    /* Clear activation state */
     setTimeout(() => {
       set((s) => (s.activeSensor === sensor ? { activeSensor: null, activeLobe: null, activeColor: null, showInfo: false, infoContent: null } : {}));
-    }, baseDuration + baseDelay + 1400);
+    }, totalTime + 1400);
 
+    /* Remove impulse */
     setTimeout(() => {
       set((s) => ({ neuralImpulses: s.neuralImpulses.filter((i) => i.id !== impulse.id) }));
-    }, baseDuration + baseDelay + 600);
+    }, totalTime + 600);
   },
 
   clearImpulses: () => set({ neuralImpulses: [] }),

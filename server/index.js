@@ -15,11 +15,13 @@ const io = new SocketIO(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] },
 });
 
-const VALID_SENSORS = ['right_hand', 'left_hand', 'eye', 'ear', 'mouth', 'forehead'];
+const VALID_SENSORS = ['right_hand', 'left_hand', 'right_leg', 'left_leg', 'eye', 'ear', 'mouth', 'forehead'];
 
 const BRAIN_MAPPING = {
   right_hand: { lobe: 'Left Motor Cortex', color: '#5B9BD5', description: 'Controls voluntary movement of the right side' },
   left_hand:  { lobe: 'Right Motor Cortex', color: '#5B9BD5', description: 'Controls voluntary movement of the left side' },
+  right_leg:  { lobe: 'Left Motor Cortex (Leg)', color: '#E8686A', description: 'Controls voluntary movement of the right leg via paracentral lobule' },
+  left_leg:   { lobe: 'Right Motor Cortex (Leg)', color: '#E8686A', description: 'Controls voluntary movement of the left leg via paracentral lobule' },
   eye:        { lobe: 'Occipital Lobe', color: '#A98DC7', description: 'Processes visual information' },
   ear:        { lobe: 'Temporal Lobe', color: '#7DB87D', description: 'Processes auditory information' },
   mouth:      { lobe: "Broca's Area", color: '#D4896B', description: 'Motor speech production' },
