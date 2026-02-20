@@ -1,0 +1,11 @@
+Model Information:
+* title:	Handsome Male Basemesh
+* source:	https://sketchfab.com/3d-models/handsome-male-basemesh-c019811ad1e1468397adc47a129f9c0a
+* author:	BIGE (https://sketchfab.com/ZBIGE)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Handsome Male Basemesh" (https://sketchfab.com/3d-models/handsome-male-basemesh-c019811ad1e1468397adc47a129f9c0a) by BIGE (https://sketchfab.com/ZBIGE) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

@@ -1,64 +1,34 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import useStore from '../store/useStore';
+import useStore, { BRAIN_MAPPING } from '../store/useStore';
 
 const ActivityHistory = () => {
-  const { activationHistory } = useStore();
-  
-  if (activationHistory.length === 0) return null;
-  
-  const formatTime = (date) => {
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-  };
-  
+  const history = useStore((s) => s.activationHistory || []);
+  if (history.length === 0) return null;
+
+  const recent = history.slice(-5).reverse();
+
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 30 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: 0.4 }}
-      className="fixed right-6 top-1/2 -translate-y-1/2 z-40 mt-16"
-    >
-      <div className="glass rounded-2xl p-4 w-56">
-        <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">
-          Activity Log
-        </h3>
-        
-        <div className="space-y-2 max-h-64 overflow-y-auto">
-          <AnimatePresence mode="popLayout">
-            {activationHistory.map((item, index) => (
-              <motion.div
-                key={`${item.timestamp.getTime()}-${index}`}
-                initial={{ opacity: 0, y: -10, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ type: 'spring', damping: 20 }}
-                className="flex items-center gap-3 p-2 rounded-lg bg-white/5"
-              >
-                {/* Color dot */}
-                <div
-                  className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: item.color }}
-                />
-                
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-300 truncate">
-                    {item.lobe}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {formatTime(item.timestamp)}
-                  </p>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
+    <div className="fixed z-20" style={{ bottom: '3.5rem', right: '1.25rem' }}>
+      <div className="med-panel px-3 py-2 rounded" style={{ maxWidth: 170 }}>
+        <div className="text-[9px] uppercase tracking-wider mb-1.5" style={{ color: '#9CA3AF' }}>
+          Recent
+        </div>
+        <div className="flex flex-col gap-0.5">
+          {recent.map((entry, i) => {
+            const m = entry.sensor ? BRAIN_MAPPING[entry.sensor] : null;
+            return (
+              <div key={i} className="flex items-center gap-1.5 text-[10px]" style={{ color: '#6B7280' }}>
+                <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: m?.color || '#9CA3AF' }} />
+                <span className="truncate">{m?.name || entry.sensor}</span>
+                <span className="ml-auto text-[9px]" style={{ color: '#D1D5DB' }}>
+                  {new Date(entry.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 };
 

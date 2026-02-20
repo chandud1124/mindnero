@@ -1,618 +1,639 @@
-import React, { useRef, useMemo, useEffect } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Float, MeshDistortMaterial } from '@react-three/drei';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
+import { gsap } from 'gsap';
 import * as THREE from 'three';
-import useStore, { BRAIN_MAPPING, SENSOR_POSITIONS } from '../store/useStore';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { EffectComposer as ThreeEffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import useStore, {
+  BRAIN_MAPPING, NERVE_PATHWAYS, SENSOR_POSITIONS, NERVE_ANATOMY, LOBE_COLORS,
+} from '../store/useStore';
 
-// Human body component (transparent with nervous system)
-const HumanBody = ({ activeSensor }) => {
-  const bodyRef = useRef();
-  const nervousSystemRef = useRef();
-  
-  useFrame((state) => {
-    if (bodyRef.current) {
-      // Subtle breathing animation
-      const breathe = Math.sin(state.clock.elapsedTime * 1.5) * 0.01;
-      bodyRef.current.scale.y = 1 + breathe;
-    }
-  });
-  
-  // Body parts positions (scaled for better view)
-  const bodyParts = {
-    head: { position: [0, 1.5, 0], radius: 0.18 },
-    neck: { position: [0, 1.2, 0], size: [0.08, 0.15, 0.08] },
-    torso: { position: [0, 0.6, 0], size: [0.25, 0.5, 0.12] },
-    leftArm: { position: [-0.35, 0.8, 0], size: [0.06, 0.4, 0.06] },
-    rightArm: { position: [0.35, 0.8, 0], size: [0.06, 0.4, 0.06] },
-    leftForearm: { position: [-0.35, 0.25, 0], size: [0.05, 0.35, 0.05] },
-    rightForearm: { position: [0.35, 0.25, 0], size: [0.05, 0.35, 0.05] },
-    leftHand: { position: [-0.35, -0.15, 0], radius: 0.06 },
-    rightHand: { position: [0.35, -0.15, 0], radius: 0.06 },
-    leftLeg: { position: [-0.1, -0.15, 0], size: [0.08, 0.5, 0.08] },
-    rightLeg: { position: [0.1, -0.15, 0], size: [0.08, 0.5, 0.08] },
-    leftShin: { position: [-0.1, -0.8, 0], size: [0.06, 0.4, 0.06] },
-    rightShin: { position: [0.1, -0.8, 0], size: [0.06, 0.4, 0.06] },
-  };
-  
-  return (
-    <group ref={bodyRef} position={[0, -0.2, 0]}>
-      {/* Head */}
-      <mesh position={bodyParts.head.position}>
-        <sphereGeometry args={[bodyParts.head.radius, 32, 32]} />
-        <meshStandardMaterial
-          color="#1a3a5f"
-          transparent
-          opacity={0.15}
-          roughness={0.3}
-          metalness={0.1}
-        />
-      </mesh>
-      
-      {/* Neck */}
-      <mesh position={bodyParts.neck.position}>
-        <boxGeometry args={bodyParts.neck.size} />
-        <meshStandardMaterial
-          color="#1a3a5f"
-          transparent
-          opacity={0.15}
-          roughness={0.3}
-          metalness={0.1}
-        />
-      </mesh>
-      
-      {/* Torso */}
-      <mesh position={bodyParts.torso.position}>
-        <boxGeometry args={bodyParts.torso.size} />
-        <meshStandardMaterial
-          color="#1a3a5f"
-          transparent
-          opacity={0.15}
-          roughness={0.3}
-          metalness={0.1}
-        />
-      </mesh>
-      
-      {/* Arms */}
-      <mesh position={bodyParts.leftArm.position}>
-        <boxGeometry args={bodyParts.leftArm.size} />
-        <meshStandardMaterial
-          color="#1a3a5f"
-          transparent
-          opacity={0.15}
-          roughness={0.3}
-          metalness={0.1}
-        />
-      </mesh>
-      <mesh position={bodyParts.rightArm.position}>
-        <boxGeometry args={bodyParts.rightArm.size} />
-        <meshStandardMaterial
-          color="#1a3a5f"
-          transparent
-          opacity={0.15}
-          roughness={0.3}
-          metalness={0.1}
-        />
-      </mesh>
-      
-      {/* Forearms */}
-      <mesh position={bodyParts.leftForearm.position}>
-        <boxGeometry args={bodyParts.leftForearm.size} />
-        <meshStandardMaterial
-          color="#1a3a5f"
-          transparent
-          opacity={0.15}
-          roughness={0.3}
-          metalness={0.1}
-        />
-      </mesh>
-      <mesh position={bodyParts.rightForearm.position}>
-        <boxGeometry args={bodyParts.rightForearm.size} />
-        <meshStandardMaterial
-          color="#1a3a5f"
-          transparent
-          opacity={0.15}
-          roughness={0.3}
-          metalness={0.1}
-        />
-      </mesh>
-      
-      {/* Hands */}
-      <mesh position={bodyParts.leftHand.position}>
-        <sphereGeometry args={[bodyParts.leftHand.radius, 16, 16]} />
-        <meshStandardMaterial
-          color={activeSensor === 'left_hand' ? '#3B82F6' : '#1a3a5f'}
-          transparent
-          opacity={activeSensor === 'left_hand' ? 0.6 : 0.2}
-          emissive={activeSensor === 'left_hand' ? '#3B82F6' : '#000000'}
-          emissiveIntensity={activeSensor === 'left_hand' ? 0.5 : 0}
-          roughness={0.3}
-          metalness={0.1}
-        />
-      </mesh>
-      <mesh position={bodyParts.rightHand.position}>
-        <sphereGeometry args={[bodyParts.rightHand.radius, 16, 16]} />
-        <meshStandardMaterial
-          color={activeSensor === 'right_hand' ? '#3B82F6' : '#1a3a5f'}
-          transparent
-          opacity={activeSensor === 'right_hand' ? 0.6 : 0.2}
-          emissive={activeSensor === 'right_hand' ? '#3B82F6' : '#000000'}
-          emissiveIntensity={activeSensor === 'right_hand' ? 0.5 : 0}
-          roughness={0.3}
-          metalness={0.1}
-        />
-      </mesh>
-      
-      {/* Legs */}
-      <mesh position={bodyParts.leftLeg.position}>
-        <boxGeometry args={bodyParts.leftLeg.size} />
-        <meshStandardMaterial
-          color="#1a3a5f"
-          transparent
-          opacity={0.15}
-          roughness={0.3}
-          metalness={0.1}
-        />
-      </mesh>
-      <mesh position={bodyParts.rightLeg.position}>
-        <boxGeometry args={bodyParts.rightLeg.size} />
-        <meshStandardMaterial
-          color="#1a3a5f"
-          transparent
-          opacity={0.15}
-          roughness={0.3}
-          metalness={0.1}
-        />
-      </mesh>
-      
-      {/* Shins */}
-      <mesh position={bodyParts.leftShin.position}>
-        <boxGeometry args={bodyParts.leftShin.size} />
-        <meshStandardMaterial
-          color="#1a3a5f"
-          transparent
-          opacity={0.15}
-          roughness={0.3}
-          metalness={0.1}
-        />
-      </mesh>
-      <mesh position={bodyParts.rightShin.position}>
-        <boxGeometry args={bodyParts.rightShin.size} />
-        <meshStandardMaterial
-          color="#1a3a5f"
-          transparent
-          opacity={0.15}
-          roughness={0.3}
-          metalness={0.1}
-        />
-      </mesh>
-      
-      {/* Nervous System - Spinal cord */}
-      <mesh position={[0, 0.3, -0.05]}>
-        <cylinderGeometry args={[0.015, 0.015, 1.8, 8]} />
-        <meshStandardMaterial
-          color="#60A5FA"
-          transparent
-          opacity={0.4}
-          emissive="#60A5FA"
-          emissiveIntensity={0.3}
-        />
-      </mesh>
-      
-      {/* Neural pathways from hands to spine */}
-      <NeuralPathway
-        start={[-0.35, -0.15, 0]}
-        end={[-0.15, 0.3, 0]}
-        active={activeSensor === 'left_hand'}
-        color="#3B82F6"
-      />
-      <NeuralPathway
-        start={[0.35, -0.15, 0]}
-        end={[0.15, 0.3, 0]}
-        active={activeSensor === 'right_hand'}
-        color="#3B82F6"
-      />
-      
-      {/* Neural pathways from face */}
-      <NeuralPathway
-        start={[0, 1.55, 0.15]}
-        end={[0, 1.2, 0]}
-        active={activeSensor === 'eye'}
-        color="#A855F7"
-      />
-      <NeuralPathway
-        start={[-0.15, 1.5, 0]}
-        end={[0, 1.2, 0]}
-        active={activeSensor === 'ear'}
-        color="#22C55E"
-      />
-      <NeuralPathway
-        start={[0, 1.45, 0.12]}
-        end={[0, 1.2, 0]}
-        active={activeSensor === 'mouth'}
-        color="#F97316"
-      />
-      <NeuralPathway
-        start={[0, 1.65, 0.1]}
-        end={[0, 1.2, 0]}
-        active={activeSensor === 'forehead'}
-        color="#06B6D4"
-      />
-    </group>
-  );
+/* ═══════════════════ Constants ═══════════════════ */
+const ANATOMY = {
+  feetY: -0.98,
+  brainCenterY: 1.55,
+  spineTopY: 1.27,
+  spineBottomY: -0.05,
 };
 
-// Neural pathway component
-const NeuralPathway = ({ start, end, active, color }) => {
-  const lineRef = useRef();
-  
-  useFrame((state) => {
-    if (lineRef.current && active) {
-      const pulse = Math.sin(state.clock.elapsedTime * 10) * 0.3 + 0.7;
-      lineRef.current.material.opacity = pulse * 0.8;
-    }
-  });
-  
-  const points = [
-    new THREE.Vector3(...start),
-    new THREE.Vector3(...end)
-  ];
-  
-  const geometry = new THREE.BufferGeometry().setFromPoints(points);
-  
+const NERVE_CLR = '#C9A84C';
+const NERVE_ACTIVE_CLR = '#D4A843';
+
+/* ─── Lobe centre positions (brain-local coords) ─── */
+const LOBE_CENTERS = {
+  frontal:     [0, 0.03, 0.055],
+  parietal:    [0, 0.06, -0.02],
+  temporal:    [-0.09, -0.02, 0.015],
+  occipital:   [0, 0.0, -0.085],
+  motor_left:  [-0.05, 0.045, 0.025],
+  motor_right: [0.05, 0.045, 0.025],
+  broca:       [-0.075, 0.005, 0.05],
+};
+
+/* ═══════════════════ Nerve Tube ═══════════════════ */
+const NerveTube = ({ points, radius = 0.003, color = NERVE_CLR, opacity = 0.55, emissiveIntensity = 0.35 }) => {
+  const curve = useMemo(
+    () => new THREE.CatmullRomCurve3(points.map((p) => new THREE.Vector3(...p))),
+    [points],
+  );
   return (
-    <line ref={lineRef} geometry={geometry}>
-      <lineBasicMaterial
+    <mesh>
+      <tubeGeometry args={[curve, 36, radius, 8, false]} />
+      <meshStandardMaterial
         color={color}
         transparent
-        opacity={active ? 0.8 : 0.2}
-        linewidth={2}
-      />
-    </line>
-  );
-};
-
-// Realistic Brain Component
-const RealisticBrain = ({ activeLobe, activeColor }) => {
-  const brainRef = useRef();
-  const leftHemisphereRef = useRef();
-  const rightHemisphereRef = useRef();
-  
-  useFrame((state) => {
-    if (brainRef.current) {
-      const breathe = Math.sin(state.clock.elapsedTime * 1) * 0.02;
-      brainRef.current.scale.setScalar(1 + breathe);
-    }
-  });
-  
-  // Brain lobe positions (more anatomically correct)
-  const lobePositions = {
-    frontal: { left: [-0.06, 0.05, 0.08], right: [0.06, 0.05, 0.08] },
-    motor_left: { position: [-0.08, 0.02, 0] },
-    motor_right: { position: [0.08, 0.02, 0] },
-    occipital: { position: [0, -0.03, -0.08] },
-    temporal: { left: [-0.09, -0.02, 0], right: [0.09, -0.02, 0] },
-    broca: { position: [-0.07, 0.01, 0.05] }
-  };
-  
-  return (
-    <group ref={brainRef} position={[0, 1.5, 0]} scale={1.2}>
-      {/* Left Hemisphere */}
-      <mesh ref={leftHemisphereRef} position={[-0.05, 0, 0]}>
-        <sphereGeometry args={[0.12, 32, 32, 0, Math.PI]} />
-        <meshStandardMaterial
-          color="#2d4a6f"
-          transparent
-          opacity={0.4}
-          roughness={0.8}
-          metalness={0.2}
-        />
-      </mesh>
-      
-      {/* Right Hemisphere */}
-      <mesh ref={rightHemisphereRef} position={[0.05, 0, 0]} rotation={[0, Math.PI, 0]}>
-        <sphereGeometry args={[0.12, 32, 32, 0, Math.PI]} />
-        <meshStandardMaterial
-          color="#2d4a6f"
-          transparent
-          opacity={0.4}
-          roughness={0.8}
-          metalness={0.2}
-        />
-      </mesh>
-      
-      {/* Brain Lobes - More detailed */}
-      <BrainLobe
-        position={lobePositions.motor_left.position}
-        isActive={activeLobe === 'motor_left'}
-        activeColor={activeColor}
-        size={0.04}
-      />
-      <BrainLobe
-        position={lobePositions.motor_right.position}
-        isActive={activeLobe === 'motor_right'}
-        activeColor={activeColor}
-        size={0.04}
-      />
-      <BrainLobe
-        position={lobePositions.occipital.position}
-        isActive={activeLobe === 'occipital'}
-        activeColor={activeColor}
-        size={0.045}
-      />
-      <BrainLobe
-        position={lobePositions.temporal.left}
-        isActive={activeLobe === 'temporal'}
-        activeColor={activeColor}
-        size={0.04}
-      />
-      <BrainLobe
-        position={lobePositions.broca.position}
-        isActive={activeLobe === 'broca'}
-        activeColor={activeColor}
-        size={0.035}
-      />
-      <BrainLobe
-        position={lobePositions.frontal.left}
-        isActive={activeLobe === 'frontal'}
-        activeColor={activeColor}
-        size={0.05}
-      />
-      
-      {/* Corpus Callosum (connection between hemispheres) */}
-      <mesh position={[0, -0.02, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.02, 0.02, 0.1, 16]} />
-        <meshStandardMaterial
-          color="#60A5FA"
-          transparent
-          opacity={0.3}
-          emissive="#60A5FA"
-          emissiveIntensity={0.2}
-        />
-      </mesh>
-      
-      {/* Neural network inside brain */}
-      <NeuralNetwork activeLobe={activeLobe} activeColor={activeColor} />
-    </group>
-  );
-};
-
-// Brain lobe component
-const BrainLobe = ({ position, isActive, activeColor, size = 0.04 }) => {
-  const meshRef = useRef();
-  const glowRef = useRef();
-  
-  useFrame((state) => {
-    if (meshRef.current) {
-      const breathe = Math.sin(state.clock.elapsedTime * 2) * 0.05;
-      meshRef.current.scale.setScalar(1 + breathe);
-      
-      if (isActive && glowRef.current) {
-        const pulse = Math.sin(state.clock.elapsedTime * 8) * 0.3 + 0.7;
-        glowRef.current.material.opacity = pulse * 0.6;
-      }
-    }
-  });
-  
-  const color = isActive ? activeColor : '#3a5a7f';
-  
-  return (
-    <group position={position}>
-      <mesh ref={meshRef}>
-        <sphereGeometry args={[size, 16, 16]} />
-        <meshStandardMaterial
-          color={color}
-          transparent
-          opacity={isActive ? 0.9 : 0.5}
-          emissive={isActive ? activeColor : '#000000'}
-          emissiveIntensity={isActive ? 0.6 : 0}
-          roughness={0.4}
-          metalness={0.3}
-        />
-      </mesh>
-      
-      {isActive && (
-        <mesh ref={glowRef} scale={2}>
-          <sphereGeometry args={[size, 16, 16]} />
-          <meshBasicMaterial
-            color={activeColor}
-            transparent
-            opacity={0.3}
-            side={THREE.BackSide}
-          />
-        </mesh>
-      )}
-    </group>
-  );
-};
-
-// Neural network lines inside brain
-const NeuralNetwork = ({ activeLobe, activeColor }) => {
-  const linesRef = useRef();
-  const pointsRef = useRef([]);
-  
-  // Generate neural network points
-  const networkData = useMemo(() => {
-    const nodes = [];
-    const connections = [];
-    
-    // Generate random nodes inside brain shape
-    for (let i = 0; i < 50; i++) {
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1);
-      const r = 0.3 + Math.random() * 0.6;
-      
-      nodes.push({
-        position: new THREE.Vector3(
-          r * Math.sin(phi) * Math.cos(theta),
-          r * Math.sin(phi) * Math.sin(theta) * 0.8,
-          r * Math.cos(phi)
-        ),
-        connections: []
-      });
-    }
-    
-    // Create connections between nearby nodes
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const dist = nodes[i].position.distanceTo(nodes[j].position);
-        if (dist < 0.5 && Math.random() > 0.6) {
-          connections.push([nodes[i].position, nodes[j].position]);
-        }
-      }
-    }
-    
-    return { nodes, connections };
-  }, []);
-  
-  useFrame((state) => {
-    if (linesRef.current) {
-      // Animate line opacity
-      const pulse = Math.sin(state.clock.elapsedTime * 2) * 0.1 + 0.2;
-      linesRef.current.material.opacity = activeLobe ? pulse + 0.3 : pulse;
-    }
-  });
-  
-  return (
-    <group>
-      {networkData.connections.map((connection, i) => (
-        <line key={i} ref={i === 0 ? linesRef : null}>
-          <bufferGeometry>
-            <bufferAttribute
-              attach="attributes-position"
-              count={2}
-              array={new Float32Array([
-                connection[0].x, connection[0].y, connection[0].z,
-                connection[1].x, connection[1].y, connection[1].z
-              ])}
-              itemSize={3}
-            />
-          </bufferGeometry>
-          <lineBasicMaterial
-            color={activeColor || '#3B82F6'}
-            transparent
-            opacity={0.2}
-            linewidth={1}
-          />
-        </line>
-      ))}
-      
-      {/* Neural nodes */}
-      {networkData.nodes.map((node, i) => (
-        <mesh key={i} position={node.position}>
-          <sphereGeometry args={[0.02, 8, 8]} />
-          <meshBasicMaterial
-            color={activeColor || '#60A5FA'}
-            transparent
-            opacity={activeLobe ? 0.8 : 0.3}
-          />
-        </mesh>
-      ))}
-    </group>
-  );
-};
-
-// Animated particles traveling from body part to brain
-const NeuronParticle = ({ particle }) => {
-  const meshRef = useRef();
-  const startTime = useRef(Date.now());
-  
-  useFrame(() => {
-    if (!meshRef.current) return;
-    
-    const elapsed = Date.now() - startTime.current - particle.delay;
-    if (elapsed < 0) {
-      meshRef.current.visible = false;
-      return;
-    }
-    
-    meshRef.current.visible = true;
-    const progress = Math.min(elapsed / particle.duration, 1);
-    
-    // Eased progress
-    const eased = 1 - Math.pow(1 - progress, 3);
-    
-    // Interpolate position
-    const start = particle.startPosition;
-    const end = particle.endPosition;
-    
-    const x = start.x + (end.x - start.x) * eased;
-    const y = start.y + (end.y - start.y) * eased + Math.sin(eased * Math.PI) * 0.2;
-    const z = start.z + (end.z - start.z) * eased;
-    
-    meshRef.current.position.set(x, y, z);
-    
-    // Fade out
-    const opacity = progress > 0.8 ? (1 - progress) * 5 : 1;
-    meshRef.current.material.opacity = opacity * 0.8;
-    
-    // Scale pulse
-    const scale = 0.02 + Math.sin(progress * Math.PI * 6) * 0.01;
-    meshRef.current.scale.setScalar(scale * 30);
-  });
-  
-  return (
-    <mesh ref={meshRef}>
-      <sphereGeometry args={[0.02, 8, 8]} />
-      <meshBasicMaterial
-        color={particle.color}
-        transparent
-        opacity={1}
+        opacity={opacity}
+        roughness={0.7}
+        emissive={new THREE.Color(color)}
+        emissiveIntensity={emissiveIntensity}
+        toneMapped
       />
     </mesh>
   );
 };
 
-// Scene setup with human body and brain
+/* ═══════════════════ GLB Model Loader ═══════════════════ */
+const useAnatomicalModel = () => {
+  const [model, setModel] = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    new GLTFLoader().load(
+      '/handsome_male_basemesh/scene.gltf',
+      (gltf) => {
+        if (!cancelled) {
+          setModel(gltf.scene);
+          setLoading(false);
+        }
+      },
+      undefined,
+      (err) => {
+        console.error('Failed to load anatomical model:', err);
+        if (!cancelled) setLoading(false);
+      },
+    );
+    return () => { cancelled = true; };
+  }, []);
+  return { model, loading };
+};
+
+/* ═══════════════════ Anatomical Skin Mesh (GLB model) ═══════════════════ */
+const SkinMesh = ({ xrayMode, skinTransparency }) => {
+  const { model, loading } = useAnatomicalModel();
+  const groupRef = useRef();
+
+  const { scene, scaleFactor, yOffset } = useMemo(() => {
+    if (!model) return { scene: null, scaleFactor: 1, yOffset: 0 };
+    const cloned = model.clone(true);
+
+    /* Apply anatomical skin material — realistic skin tone, no plastic */
+    cloned.traverse((c) => {
+      if (c.isMesh) {
+        c.material = new THREE.MeshPhysicalMaterial({
+          color: xrayMode ? '#C8D5E0' : '#f1d2c6',
+          transparent: true,
+          opacity: xrayMode ? Math.min(0.08, skinTransparency) : skinTransparency,
+          roughness: 0.70,
+          metalness: 0,
+          /* Subsurface-scattering approximation via sheen */
+          sheen: 0.25,
+          sheenColor: new THREE.Color('#f5a08a'),
+          sheenRoughness: 0.6,
+          transmission: xrayMode ? 0.18 : 0,
+          thickness: 0.8,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+        });
+        c.castShadow = true;
+        c.receiveShadow = true;
+      }
+    });
+
+    /* Auto-fit: measure bounding box, scale to target height, place feet */
+    const box = new THREE.Box3().setFromObject(cloned);
+    const size = new THREE.Vector3();
+    const center = new THREE.Vector3();
+    box.getSize(size);
+    box.getCenter(center);
+
+    /* Centre the model at origin */
+    cloned.position.set(-center.x, -center.y, -center.z);
+
+    /* Scale so total height = 2.66 scene-units (head to toe) */
+    const TARGET_H = 2.66;
+    const s = size.y > 0 ? TARGET_H / size.y : 1;
+    const footWorldY = (box.min.y - center.y) * s;
+
+    return { scene: cloned, scaleFactor: s, yOffset: ANATOMY.feetY - footWorldY };
+  }, [model, xrayMode, skinTransparency]);
+
+  /* Subtle breathing animation */
+  useFrame((state) => {
+    if (!groupRef.current) return;
+    const breathe = 1 + Math.sin(state.clock.elapsedTime * 1.1) * 0.002;
+    groupRef.current.scale.y = scaleFactor * breathe;
+  });
+
+  /* Loading indicator — translucent silhouette outline, NOT a capsule */
+  if (loading || !scene) {
+    return (
+      <group>
+        {/* Wireframe silhouette while loading */}
+        <mesh position={[0, 0.34, 0]}>
+          <cylinderGeometry args={[0.08, 0.12, 1.85, 16, 12, true]} />
+          <meshBasicMaterial color="#B8C4CE" transparent opacity={0.08} wireframe />
+        </mesh>
+      </group>
+    );
+  }
+
+  return (
+    <group ref={groupRef} position={[0, yOffset, 0]} scale={[scaleFactor, scaleFactor, scaleFactor]}>
+      <primitive object={scene} />
+    </group>
+  );
+};
+
+/* ═══════════════════ Sensor Highlights ═══════════════════ */
+const SensorHighlights = ({ activeSensor }) => (
+  <group>
+    {Object.entries(SENSOR_POSITIONS).map(([sensor, pos]) => {
+      const active = sensor === activeSensor;
+      return (
+        <mesh key={sensor} position={[pos.x, pos.y, pos.z]}>
+          <sphereGeometry args={[sensor.includes('hand') ? 0.03 : 0.02, 12, 12]} />
+          <meshStandardMaterial
+            color={active ? '#E5B94E' : '#B8AFA0'}
+            transparent
+            opacity={active ? 0.6 : 0.10}
+            emissive={new THREE.Color(active ? '#E5B94E' : '#000')}
+            emissiveIntensity={active ? 0.5 : 0}
+          />
+        </mesh>
+      );
+    })}
+  </group>
+);
+
+/* ═══════════════════ Touch Highlight ═══════════════════ */
+const TouchHighlight = ({ sensor }) => {
+  const ref = useRef();
+  const pos = SENSOR_POSITIONS[sensor];
+  if (!pos) return null;
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useFrame((state) => {
+    if (!ref.current) return;
+    const s = 1 + Math.sin(state.clock.elapsedTime * 6) * 0.15;
+    ref.current.scale.setScalar(s);
+  });
+  return (
+    <mesh ref={ref} position={[pos.x, pos.y, pos.z]}>
+      <sphereGeometry args={[0.038, 14, 14]} />
+      <meshBasicMaterial color={BRAIN_MAPPING[sensor]?.color || '#E5B94E'} transparent opacity={0.25} depthWrite={false} />
+    </mesh>
+  );
+};
+
+/* ═══════════════════ Skeleton ═══════════════════ */
+const SkeletonLayer = ({ visible }) => {
+  if (!visible) return null;
+  const mid = (ANATOMY.spineTopY + ANATOMY.spineBottomY) / 2;
+  return (
+    <group>
+      <mesh position={[0, mid, -0.03]}>
+        <cylinderGeometry args={[0.012, 0.012, ANATOMY.spineTopY - ANATOMY.spineBottomY, 12]} />
+        <meshStandardMaterial color="#ddd4c2" transparent opacity={0.55} roughness={0.5} />
+      </mesh>
+      <mesh position={[0, ANATOMY.spineBottomY - 0.07, -0.03]}>
+        <capsuleGeometry args={[0.015, 0.14, 8, 12]} />
+        <meshStandardMaterial color="#d8cdb8" transparent opacity={0.5} roughness={0.5} />
+      </mesh>
+      {[1, -1].map((side) => (
+        <mesh key={side} position={[side * 0.12, 1.12, -0.01]} rotation={[0, 0, side * -0.25]}>
+          <capsuleGeometry args={[0.008, 0.16, 6, 8]} />
+          <meshStandardMaterial color="#ddd4c2" transparent opacity={0.4} roughness={0.5} />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
+/* ═══════════════════ Peripheral Nervous System ═══════════════════ */
+const PeripheralNervousSystem = ({ visible, activeSensor }) => {
+  if (!visible) return null;
+  const activeKey = activeSensor || '';
+  const isRightArm = activeKey === 'right_hand';
+  const isLeftArm = activeKey === 'left_hand';
+
+  return (
+    <group>
+      {Object.entries(NERVE_ANATOMY).map(([key, nerve]) => {
+        const isOnActivePath =
+          (isRightArm && (key.endsWith('_R') || key === 'spinalCord' || key === 'brainstem')) ||
+          (isLeftArm && (key.endsWith('_L') || key === 'spinalCord' || key === 'brainstem'));
+
+        return (
+          <NerveTube
+            key={key}
+            points={nerve.path}
+            radius={nerve.radius}
+            opacity={isOnActivePath ? 0.78 : 0.40}
+            color={isOnActivePath ? NERVE_ACTIVE_CLR : NERVE_CLR}
+            emissiveIntensity={isOnActivePath ? 0.55 : 0.25}
+          />
+        );
+      })}
+
+      {activeSensor && NERVE_PATHWAYS[activeSensor] && (
+        <NerveTube
+          points={NERVE_PATHWAYS[activeSensor].map(({ x, y, z }) => [x, y, z])}
+          radius={0.005}
+          opacity={0.70}
+          color={BRAIN_MAPPING[activeSensor]?.color || NERVE_ACTIVE_CLR}
+          emissiveIntensity={0.5}
+        />
+      )}
+    </group>
+  );
+};
+
+/* ═══════════════════ Brain Lobe Geometry Builder ═══════════════════
+   Creates an ellipsoid with gyri/sulci cortical displacement. */
+const buildLobeGeo = (rx, ry, rz, detail = 1.0) => {
+  const geo = new THREE.SphereGeometry(1, 52, 52);
+  const pos = geo.attributes.position;
+  const v = new THREE.Vector3();
+
+  for (let i = 0; i < pos.count; i++) {
+    v.set(pos.getX(i), pos.getY(i), pos.getZ(i)).normalize();
+
+    /* Gyri — broad convex ridges */
+    const g1 = Math.sin((v.x + v.y) * 26) * 0.032;
+    const g2 = Math.sin((v.y - v.z) * 22) * 0.025;
+    const g3 = Math.cos((v.x * 1.5 + v.z) * 30) * 0.022;
+    const g4 = Math.sin((v.x - v.y * 0.5) * 38) * 0.014;
+
+    /* Sulci — sharp concave valleys */
+    const s1 = -Math.abs(Math.sin(v.x * 16 + v.z * 18 - v.y * 12)) * 0.022;
+    const s2 = -Math.abs(Math.cos(v.y * 14 + v.x * 20)) * 0.015;
+
+    const disp = (g1 + g2 + g3 + g4 + s1 + s2) * detail;
+    const r = 1 + disp;
+    pos.setXYZ(i, v.x * rx * r, v.y * ry * r, v.z * rz * r);
+  }
+  geo.computeVertexNormals();
+  return geo;
+};
+
+/* ═══════════════════ Single Brain Lobe Mesh ═══════════════════ */
+const BrainLobe = ({ geometry, position, color, active }) => (
+  <mesh geometry={geometry} position={position}>
+    <meshPhysicalMaterial
+      color={color}
+      transparent
+      opacity={active ? 0.72 : 0.32}
+      roughness={0.55}
+      clearcoat={0.12}
+      emissive={new THREE.Color(active ? color : '#000')}
+      emissiveIntensity={active ? 0.35 : 0}
+      depthWrite={false}
+    />
+  </mesh>
+);
+
+/* ═══════════════════ Segmented Brain (separate lobe meshes) ═══════════════════ */
+const SegmentedBrain = ({ activeLobe }) => {
+  /* Each lobe has unique ellipsoid radii → unique gyri/sulci pattern */
+  const frontalGeo   = useMemo(() => buildLobeGeo(0.085, 0.065, 0.058), []);
+  const parietalGeo  = useMemo(() => buildLobeGeo(0.075, 0.050, 0.058), []);
+  const temporalGeo  = useMemo(() => buildLobeGeo(0.032, 0.038, 0.062), []);
+  const occipitalGeo = useMemo(() => buildLobeGeo(0.055, 0.050, 0.038), []);
+  const motorGeo     = useMemo(() => buildLobeGeo(0.014, 0.055, 0.016, 0.6), []);
+  const brocaGeo     = useMemo(() => buildLobeGeo(0.020, 0.020, 0.020, 0.8), []);
+  const cerebellumGeo = useMemo(() => buildLobeGeo(0.042, 0.032, 0.035, 1.2), []);
+
+  return (
+    <group position={[0, ANATOMY.brainCenterY, 0]}>
+      {/* Outer translucent meninges shell */}
+      <mesh scale={[1, 1.05, 1.10]}>
+        <sphereGeometry args={[0.165, 48, 48]} />
+        <meshPhysicalMaterial color="#F0E8E0" transparent opacity={0.07} roughness={0.8} depthWrite={false} />
+      </mesh>
+
+      {/* ── FRONTAL LOBE (light blue) ── */}
+      <BrainLobe geometry={frontalGeo} position={[0, 0.03, 0.055]} color={LOBE_COLORS.frontal} active={activeLobe === 'frontal'} />
+
+      {/* ── PARIETAL LOBE (green) ── */}
+      <BrainLobe geometry={parietalGeo} position={[0, 0.06, -0.02]} color={LOBE_COLORS.parietal} active={false} />
+
+      {/* ── LEFT TEMPORAL LOBE (orange) ── */}
+      <BrainLobe geometry={temporalGeo} position={[-0.09, -0.02, 0.015]} color={LOBE_COLORS.temporal} active={activeLobe === 'temporal'} />
+      {/* ── RIGHT TEMPORAL LOBE (orange) ── */}
+      <BrainLobe geometry={temporalGeo} position={[0.09, -0.02, 0.015]} color={LOBE_COLORS.temporal} active={activeLobe === 'temporal'} />
+
+      {/* ── OCCIPITAL LOBE (purple) ── */}
+      <BrainLobe geometry={occipitalGeo} position={[0, 0.0, -0.085]} color={LOBE_COLORS.occipital} active={activeLobe === 'occipital'} />
+
+      {/* ── LEFT MOTOR CORTEX STRIP (red) ── */}
+      <BrainLobe geometry={motorGeo} position={[-0.05, 0.045, 0.025]} color={LOBE_COLORS.motor} active={activeLobe === 'motor_left'} />
+      {/* ── RIGHT MOTOR CORTEX STRIP (red) ── */}
+      <BrainLobe geometry={motorGeo} position={[0.05, 0.045, 0.025]} color={LOBE_COLORS.motor} active={activeLobe === 'motor_right'} />
+
+      {/* ── BROCA'S AREA (dark orange) ── */}
+      <BrainLobe geometry={brocaGeo} position={[-0.075, 0.005, 0.05]} color={LOBE_COLORS.broca} active={activeLobe === 'broca'} />
+
+      {/* ── Cerebellum ── */}
+      <mesh geometry={cerebellumGeo} position={[0, -0.065, -0.065]}>
+        <meshPhysicalMaterial color="#E0C0C8" transparent opacity={0.65} roughness={0.55} clearcoat={0.08} />
+      </mesh>
+
+      {/* ── Corpus callosum ── */}
+      <mesh position={[0, -0.025, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <capsuleGeometry args={[0.016, 0.09, 12, 16]} />
+        <meshStandardMaterial color="#ddc8ae" transparent opacity={0.62} roughness={0.5} />
+      </mesh>
+
+      {/* ── Brainstem ── */}
+      <mesh position={[0, -0.11, -0.01]}>
+        <capsuleGeometry args={[0.015, 0.08, 10, 14]} />
+        <meshStandardMaterial color="#d4b99e" transparent opacity={0.72} roughness={0.5} />
+      </mesh>
+
+      {/* ── Longitudinal fissure (medial gap line) ── */}
+      <mesh position={[0, 0.02, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.001, 0.001, 0.22, 4]} />
+        <meshBasicMaterial color="#B0A090" transparent opacity={0.25} />
+      </mesh>
+    </group>
+  );
+};
+
+/* ═══════════════════ Signal Pulse (GSAP animated) ═══════════════════ */
+const SignalPulse = ({ impulse }) => {
+  const ref = useRef();
+  const prog = useRef({ value: 0 });
+
+  const curve = useMemo(() => {
+    if (!impulse.pathway || impulse.pathway.length < 2) return null;
+    return new THREE.CatmullRomCurve3(
+      impulse.pathway.map((p) => new THREE.Vector3(p.x, p.y, p.z)),
+      false, 'catmullrom', 0.5,
+    );
+  }, [impulse.pathway]);
+
+  useEffect(() => {
+    if (!curve) return;
+    prog.current.value = 0;
+    const tw = gsap.to(prog.current, {
+      value: 1,
+      duration: impulse.duration / 1000,
+      delay: (impulse.delay || 0) / 1000,
+      ease: 'none',
+    });
+    return () => tw.kill();
+  }, [curve, impulse.duration, impulse.delay, impulse.id]);
+
+  useFrame(() => {
+    if (!ref.current || !curve) return;
+    const v = prog.current.value;
+    if (v <= 0 || v >= 1) { ref.current.visible = false; return; }
+    const pos = curve.getPointAt(v);
+    ref.current.visible = true;
+    ref.current.position.copy(pos);
+    ref.current.scale.setScalar(0.016 + Math.sin(v * Math.PI * 14) * 0.003);
+    ref.current.material.opacity = v > 0.92 ? (1 - v) * 12 : 0.85;
+  });
+
+  if (!curve) return null;
+  return (
+    <mesh ref={ref}>
+      <sphereGeometry args={[0.02, 12, 12]} />
+      <meshBasicMaterial color={impulse.color || NERVE_ACTIVE_CLR} transparent />
+    </mesh>
+  );
+};
+
+/* ═══════════════════ Neuron Burst ═══════════════════ */
+const NeuronBurst = ({ activeLobe, activeColor }) => {
+  const [progress, setProgress] = useState(0);
+
+  const anchor = useMemo(() => {
+    if (!activeLobe) return null;
+    const c = LOBE_CENTERS[activeLobe];
+    if (!c) return null;
+    return new THREE.Vector3(c[0], c[1] + ANATOMY.brainCenterY, c[2]);
+  }, [activeLobe]);
+
+  const branches = useMemo(() => {
+    if (!anchor) return [];
+    return Array.from({ length: 10 }, (_, i) => {
+      const theta = (i / 10) * Math.PI * 2;
+      const lift = 0.018 + (i % 3) * 0.009;
+      const end = new THREE.Vector3(
+        anchor.x + Math.cos(theta) * 0.04,
+        anchor.y + lift,
+        anchor.z + Math.sin(theta) * 0.032,
+      );
+      const mid = anchor.clone().lerp(end, 0.5).add(new THREE.Vector3(0, 0.005, 0));
+      return [anchor, mid, end];
+    });
+  }, [anchor]);
+
+  useEffect(() => {
+    if (!anchor) { setProgress(0); return; }
+    const s = { value: 0 };
+    const tw = gsap.to(s, {
+      value: 1, duration: 0.8, delay: 0.1, ease: 'power2.out',
+      onUpdate: () => setProgress(s.value),
+    });
+    return () => tw.kill();
+  }, [anchor, activeLobe]);
+
+  if (!anchor || progress <= 0) return null;
+
+  return (
+    <group>
+      {branches.map((b, i) => {
+        const endPt = b[2].clone().lerp(b[0], 1 - progress);
+        const geo = new THREE.BufferGeometry().setFromPoints([b[0], b[1], endPt]);
+        return (
+          <React.Fragment key={i}>
+            <line geometry={geo}>
+              <lineBasicMaterial color={activeColor || '#F4C4CE'} transparent opacity={0.12 + progress * 0.5} />
+            </line>
+            <mesh position={endPt.toArray()}>
+              <sphereGeometry args={[0.003 + progress * 0.003, 8, 8]} />
+              <meshBasicMaterial color={activeColor || '#F4C4CE'} transparent opacity={0.25 + progress * 0.45} />
+            </mesh>
+          </React.Fragment>
+        );
+      })}
+    </group>
+  );
+};
+
+/* ═══════════════════ Camera Rig (GSAP) ═══════════════════ */
+const CameraRig = ({ controlsRef, activeLobe, resetTrigger }) => {
+  const { camera } = useThree();
+  const DEFAULT_CAM = useMemo(() => ({ x: 0, y: 0.42, z: 2.8 }), []);
+  const DEFAULT_TARGET = useMemo(() => ({ x: 0, y: 0.42, z: 0 }), []);
+
+  const FOCUS = useMemo(() => ({
+    motor_left:  { target: { x: -0.07, y: 1.57, z: 0.02 }, cam: { x: -0.40, y: 1.62, z: 0.70 } },
+    motor_right: { target: { x: 0.07, y: 1.57, z: 0.02 }, cam: { x: 0.40, y: 1.62, z: 0.70 } },
+    occipital:   { target: { x: 0, y: 1.54, z: -0.08 }, cam: { x: 0, y: 1.58, z: 0.65 } },
+    temporal:    { target: { x: -0.09, y: 1.53, z: 0.02 }, cam: { x: -0.50, y: 1.56, z: 0.78 } },
+    broca:       { target: { x: -0.07, y: 1.54, z: 0.05 }, cam: { x: -0.44, y: 1.58, z: 0.72 } },
+    frontal:     { target: { x: 0, y: 1.58, z: 0.08 }, cam: { x: 0, y: 1.60, z: 0.66 } },
+  }), []);
+
+  useEffect(() => {
+    if (!controlsRef.current) return;
+    const dest = activeLobe ? FOCUS[activeLobe] : null;
+    const t = dest?.target || DEFAULT_TARGET;
+    const c = dest?.cam || DEFAULT_CAM;
+    const dur = activeLobe ? 1.1 : 1.2;
+    const tw1 = gsap.to(controlsRef.current.target, { ...t, duration: dur, ease: 'power2.out', onUpdate: () => controlsRef.current?.update() });
+    const tw2 = gsap.to(camera.position, { ...c, duration: dur, ease: 'power2.out', onUpdate: () => controlsRef.current?.update() });
+    return () => { tw1.kill(); tw2.kill(); };
+  }, [activeLobe, resetTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return null;
+};
+
+/* ═══════════════════ Bloom (minimal medical) ═══════════════════ */
+const BloomEffect = () => {
+  const { gl, scene, camera, size } = useThree();
+  const composerRef = useRef(null);
+
+  useEffect(() => {
+    const composer = new ThreeEffectComposer(gl);
+    composer.addPass(new RenderPass(scene, camera));
+    const bloom = new UnrealBloomPass(
+      new THREE.Vector2(size.width, size.height),
+      0.18,  // strength — very subtle
+      0.22,  // radius
+      0.82,  // threshold — only brightest elements bloom
+    );
+    composer.addPass(bloom);
+    composer.addPass(new OutputPass());
+    composerRef.current = composer;
+    return () => composer.dispose();
+  }, [gl, scene, camera]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { composerRef.current?.setSize(size.width, size.height); }, [size]);
+
+  useFrame((_, delta) => {
+    if (composerRef.current) {
+      gl.autoClear = false;
+      gl.clear();
+      composerRef.current.render(delta);
+    }
+  }, 1);
+
+  return null;
+};
+
+/* ═══════════════════ Human Body Group ═══════════════════ */
+const HumanBody = ({ activeSensor, xrayMode, skinTransparency, showSkeleton, nervousSystemView }) => (
+  <group>
+    <SkinMesh xrayMode={xrayMode} skinTransparency={skinTransparency} />
+    <SkeletonLayer visible={showSkeleton} />
+    <PeripheralNervousSystem visible={nervousSystemView} activeSensor={activeSensor} />
+    <SensorHighlights activeSensor={activeSensor} />
+    {activeSensor && <TouchHighlight sensor={activeSensor} />}
+  </group>
+);
+
+/* ═══════════════════ Scene ═══════════════════ */
 const Scene = () => {
-  const { activeSensor, activeLobe, activeColor, neuralImpulses } = useStore();
-  
+  const controlsRef = useRef();
+  const {
+    activeSensor, activeLobe, activeColor, neuralImpulses,
+    xrayMode, nervousSystemView, showSkeleton, skinTransparency, resetViewTrigger,
+  } = useStore();
+
   return (
     <>
-      {/* Lighting */}
-      <ambientLight intensity={0.4} />
-      <pointLight position={[2, 3, 2]} intensity={0.6} color="#60A5FA" />
-      <pointLight position={[-2, 2, -2]} intensity={0.4} color="#A855F7" />
-      <pointLight position={[0, 4, 0]} intensity={0.5} color="#06B6D4" />
-      <pointLight position={[0, -2, 2]} intensity={0.3} color="#3B82F6" />
-      
-      {/* Human Body with nervous system */}
-      <HumanBody activeSensor={activeSensor} />
-      
-      {/* Realistic Brain */}
-      <RealisticBrain activeLobe={activeLobe} activeColor={activeColor} />
-      
-      {/* Traveling particles */}
-      {neuralImpulses && neuralImpulses.map((particle) => (
-        <NeuronParticle key={particle.id} particle={particle} />
-      ))}
-      
-      {/* Camera Controls */}
-      <OrbitControls
-        enablePan={false}
-        enableZoom={true}
-        minDistance={1.5}
-        maxDistance={4}
-        maxPolarAngle={Math.PI / 1.5}
-        minPolarAngle={Math.PI / 4}
-        target={[0, 0.5, 0]}
+      {/* ── Soft neutral medical lighting ── */}
+      <ambientLight intensity={0.58} color="#FFFFFF" />
+      <directionalLight
+        position={[0, 4, 2]} intensity={1.2} color="#FAFBFF"
+        castShadow shadow-mapSize-width={512} shadow-mapSize-height={512}
       />
+      <directionalLight position={[-2.5, 2, -1.5]} intensity={0.40} color="#F0F2F8" />
+      <pointLight position={[1.5, 1.6, 1.2]} intensity={0.2} color="#FFF8F0" />
+      <directionalLight position={[0, -1, 1]} intensity={0.10} color="#E8ECF4" />
+
+      {/* Ground shadow */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, ANATOMY.feetY - 0.01, 0]} receiveShadow>
+        <planeGeometry args={[2.5, 2.5]} />
+        <shadowMaterial transparent opacity={0.06} />
+      </mesh>
+
+      <HumanBody
+        activeSensor={activeSensor}
+        xrayMode={xrayMode}
+        skinTransparency={skinTransparency}
+        showSkeleton={showSkeleton}
+        nervousSystemView={nervousSystemView}
+      />
+
+      <SegmentedBrain activeLobe={activeLobe} />
+      <NeuronBurst activeLobe={activeLobe} activeColor={activeColor} />
+
+      {nervousSystemView && neuralImpulses?.map((imp) => (
+        <SignalPulse key={imp.id} impulse={imp} />
+      ))}
+
+      <BloomEffect />
+
+      <OrbitControls
+        ref={controlsRef}
+        enablePan={false}
+        enableZoom
+        minDistance={0.5}
+        maxDistance={5.0}
+        maxPolarAngle={Math.PI / 1.3}
+        minPolarAngle={Math.PI / 6}
+        target={[0, 0.42, 0]}
+        enableDamping
+        dampingFactor={0.06}
+      />
+      <CameraRig controlsRef={controlsRef} activeLobe={activeLobe} resetTrigger={resetViewTrigger} />
     </>
   );
 };
 
-// Main Brain3D component
-const Brain3D = () => {
-  return (
-    <div className="w-full h-full" style={{ position: 'fixed', inset: 0 }}>
-      <Canvas
-        camera={{ position: [0, 0.8, 2.5], fov: 45 }}
-        gl={{ antialias: true, alpha: true }}
-        style={{ background: 'transparent' }}
-      >
-        <Scene />
-      </Canvas>
-    </div>
-  );
-};
+/* ═══════════════════ Canvas ═══════════════════ */
+const Brain3D = () => (
+  <div className="w-full h-full" style={{ position: 'fixed', inset: 0 }}>
+    <Canvas
+      camera={{ position: [0, 0.62, 2.3], fov: 47, near: 0.01, far: 50 }}
+      dpr={[1, 1.75]}
+      shadows
+      gl={{
+        antialias: true,
+        alpha: true,
+        powerPreference: 'high-performance',
+        toneMapping: THREE.ACESFilmicToneMapping,
+        toneMappingExposure: 1.12,
+      }}
+      onCreated={({ gl }) => {
+        gl.physicallyCorrectLights = true;
+        gl.shadowMap.enabled = true;
+        gl.shadowMap.type = THREE.PCFSoftShadowMap;
+      }}
+      style={{ background: 'transparent' }}
+    >
+      <Scene />
+    </Canvas>
+  </div>
+);
 
 export default Brain3D;
