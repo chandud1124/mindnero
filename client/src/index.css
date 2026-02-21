@@ -14,6 +14,37 @@
   --nerve-yellow: #E5B94E;
   --brain-pink: #F4B6C2;
   --shadow-soft: 0 1px 4px rgba(0,0,0,0.06), 0 2px 12px rgba(0,0,0,0.04);
+  --slider-bg: #E5E7EB;
+  --divider: #E5E7EB;
+  --btn-border: #E5E7EB;
+  --header-gradient: linear-gradient(180deg, rgba(245,247,250,0.95) 0%, rgba(245,247,250,0) 100%);
+  --bottom-gradient: linear-gradient(0deg, rgba(245,247,250,0.96) 0%, rgba(245,247,250,0) 100%);
+  --sensor-inactive: #D1D5DB;
+}
+
+/* ─── Dark Theme ─── */
+[data-theme="dark"] {
+  --bg: #0A0E17;
+  --bg-card: rgba(18, 24, 40, 0.92);
+  --panel-bg: rgba(18, 24, 40, 0.92);
+  --border: rgba(255, 255, 255, 0.08);
+  --text-primary: #E8ECF4;
+  --text-secondary: #9CA3AF;
+  --text-muted: #6B7280;
+  --accent: #3B82F6;
+  --shadow-soft: 0 1px 4px rgba(0,0,0,0.3), 0 2px 12px rgba(0,0,0,0.25);
+  --slider-bg: #374151;
+  --divider: rgba(255,255,255,0.08);
+  --btn-border: rgba(255,255,255,0.10);
+  --header-gradient: linear-gradient(180deg, rgba(10,14,23,0.95) 0%, rgba(10,14,23,0) 100%);
+  --bottom-gradient: linear-gradient(0deg, rgba(10,14,23,0.96) 0%, rgba(10,14,23,0) 100%);
+  --sensor-inactive: #4B5563;
+}
+
+[data-theme="dark"] .medical-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -88,3 +119,70 @@ body {
 
 /* ─── Leva overrides (hide title bar) ─── */
 [class*="leva"] { font-family: 'Inter', monospace !important; }
+
+/* ─── Range input theming ─── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: none;
+}
+
+/* ─── Mobile Responsive ─── */
+@media (max-width: 768px) {
+  .med-panel { border-radius: 10px; }
+
+  /* Larger touch targets */
+  .mobile-btn {
+    min-height: 44px;
+    min-width: 44px;
+    font-size: 13px !important;
+    padding: 8px 12px !important;
+  }
+
+  /* Pinch hint toast */
+  .pinch-hint {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    box-shadow: var(--shadow-soft);
+    z-index: 50;
+    white-space: nowrap;
+    animation: fadeInUp 0.3s ease, fadeOut 0.3s ease 4s forwards;
+  }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; pointer-events: none; }
+}

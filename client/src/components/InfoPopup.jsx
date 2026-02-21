@@ -21,22 +21,22 @@ const InfoPopup = () => {
           className="fixed z-20"
           style={{ top: '5.5rem', right: '1.25rem', maxWidth: 220 }}
         >
-          <div className="med-panel p-3 rounded" style={{ borderLeft: `2px solid ${activeColor || '#9CA3AF'}` }}>
-            <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: '#9CA3AF' }}>
+          <div className="med-panel p-3 rounded" style={{ borderLeft: `2px solid ${activeColor || 'var(--text-muted)'}` }}>
+            <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
               Active Region
             </div>
-            <div className="text-sm font-medium mb-1" style={{ color: '#2E2E2E' }}>
+            <div className="text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
               {mapping.name}
             </div>
-            <div className="text-[11px] leading-relaxed" style={{ color: '#6B7280' }}>
+            <div className="text-[11px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
               {mapping.description}
             </div>
             <div className="mt-2 flex items-center gap-2">
               <span
                 className="w-2 h-2 rounded-full"
-                style={{ background: activeColor || '#9CA3AF' }}
+                style={{ background: activeColor || 'var(--text-muted)' }}
               />
-              <span className="text-[10px]" style={{ color: '#9CA3AF' }}>
+              <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                 Sensor: {activeSensor}
               </span>
             </div>

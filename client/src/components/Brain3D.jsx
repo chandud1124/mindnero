@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { gsap } from 'gsap';
@@ -512,6 +512,7 @@ const CameraRig = ({ controlsRef, activeLobe, resetTrigger }) => {
   const FOCUS = useMemo(() => ({
     motor_left:  { target: { x: -0.07, y: 1.57, z: 0.02 }, cam: { x: -0.40, y: 1.62, z: 0.70 } },
     motor_right: { target: { x: 0.07, y: 1.57, z: 0.02 }, cam: { x: 0.40, y: 1.62, z: 0.70 } },
+    parietal:    { target: { x: 0, y: 1.61, z: -0.02 }, cam: { x: 0, y: 1.65, z: 0.68 } },
     occipital:   { target: { x: 0, y: 1.54, z: -0.08 }, cam: { x: 0, y: 1.58, z: 0.65 } },
     temporal:    { target: { x: -0.09, y: 1.53, z: 0.02 }, cam: { x: -0.50, y: 1.56, z: 0.78 } },
     broca:       { target: { x: -0.07, y: 1.54, z: 0.05 }, cam: { x: -0.44, y: 1.58, z: 0.72 } },
@@ -565,6 +566,38 @@ const BloomEffect = () => {
   return null;
 };
 
+/* ═══════════════════ Clickable Body Zones (Raycasting) ═══════════════════ */
+const CLICK_ZONES = Object.entries(SENSOR_POSITIONS).map(([sensor, pos]) => {
+  const isLimb = sensor.includes('hand') || sensor.includes('leg');
+  return { sensor, pos: [pos.x, pos.y, pos.z], radius: isLimb ? 0.10 : 0.06 };
+});
+
+const BodyClickZones = () => {
+  const activateSensor = useStore((s) => s.activateSensor);
+
+  const handleClick = useCallback((sensor) => (e) => {
+    e.stopPropagation();
+    activateSensor({ sensor, intensity: 1.0 });
+  }, [activateSensor]);
+
+  return (
+    <group>
+      {CLICK_ZONES.map(({ sensor, pos, radius }) => (
+        <mesh
+          key={sensor}
+          position={pos}
+          onClick={handleClick(sensor)}
+          onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = 'pointer'; }}
+          onPointerOut={() => { document.body.style.cursor = 'auto'; }}
+        >
+          <sphereGeometry args={[radius, 12, 12]} />
+          <meshBasicMaterial visible={false} />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
 /* ═══════════════════ Human Body Group ═══════════════════ */
 const HumanBody = ({ activeSensor, xrayMode, skinTransparency, showSkeleton, nervousSystemView }) => (
   <group>
@@ -573,27 +606,46 @@ const HumanBody = ({ activeSensor, xrayMode, skinTransparency, showSkeleton, ner
     <PeripheralNervousSystem visible={nervousSystemView} activeSensor={activeSensor} />
     <SensorHighlights activeSensor={activeSensor} />
     {activeSensor && <TouchHighlight sensor={activeSensor} />}
+    <BodyClickZones />
   </group>
 );
+
+/* ═══════════════════ Scene Background Syncer ═══════════════════ */
+const SceneBackground = () => {
+  const { scene } = useThree();
+  const darkMode = useStore((s) => s.darkMode);
+
+  useEffect(() => {
+    if (darkMode) {
+      scene.background = new THREE.Color('#0A0E17');
+    } else {
+      scene.background = null; // transparent — shows CSS background
+    }
+  }, [darkMode, scene]);
+
+  return null;
+};
 
 /* ═══════════════════ Scene ═══════════════════ */
 const Scene = () => {
   const controlsRef = useRef();
   const {
     activeSensor, activeLobe, activeColor, neuralImpulses,
-    xrayMode, nervousSystemView, showSkeleton, skinTransparency, resetViewTrigger,
+    xrayMode, nervousSystemView, showSkeleton, skinTransparency, resetViewTrigger, darkMode,
   } = useStore();
 
   return (
     <>
-      {/* ── Soft neutral medical lighting ── */}
-      <ambientLight intensity={0.58} color="#FFFFFF" />
+      <SceneBackground />
+
+      {/* ── Adaptive lighting ── */}
+      <ambientLight intensity={darkMode ? 0.35 : 0.58} color="#FFFFFF" />
       <directionalLight
-        position={[0, 4, 2]} intensity={1.2} color="#FAFBFF"
+        position={[0, 4, 2]} intensity={darkMode ? 0.9 : 1.2} color={darkMode ? '#E8ECF4' : '#FAFBFF'}
         castShadow shadow-mapSize-width={512} shadow-mapSize-height={512}
       />
-      <directionalLight position={[-2.5, 2, -1.5]} intensity={0.40} color="#F0F2F8" />
-      <pointLight position={[1.5, 1.6, 1.2]} intensity={0.2} color="#FFF8F0" />
+      <directionalLight position={[-2.5, 2, -1.5]} intensity={darkMode ? 0.25 : 0.40} color="#F0F2F8" />
+      <pointLight position={[1.5, 1.6, 1.2]} intensity={darkMode ? 0.15 : 0.2} color="#FFF8F0" />
       <directionalLight position={[0, -1, 1]} intensity={0.10} color="#E8ECF4" />
 
       {/* Ground shadow */}
