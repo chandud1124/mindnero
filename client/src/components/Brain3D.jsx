@@ -26,9 +26,32 @@ const NERVE_ACTIVE_CLR = '#D4A843';
 /* ─── Cross-component signal tracking (module-level for useFrame perf) ─── */
 const SIGNAL_STATE = { progress: 0, active: false, pathCurve: null, camCurve: null, impulseId: null };
 
+/* ─── Detect whether a pathway is a "head" (short/cranial) sensor ─── */
+function isHeadPathway(pathway) {
+  if (!pathway?.length || pathway.length < 2) return false;
+  const minY = Math.min(...pathway.map((p) => p.y));
+  return minY > 1.25; // all points above neck → cranial nerve
+}
+
 /* ─── Smooth camera path offset from nerve pathway ─── */
 function computeCameraPath(pathway) {
   if (!pathway?.length || pathway.length < 2) return null;
+
+  /* For head pathways, create a wider arc so the camera doesn't clip inside skull */
+  if (isHeadPathway(pathway)) {
+    const start = pathway[0];
+    const end = pathway[pathway.length - 1];
+    const midY = (start.y + end.y) / 2;
+    const pts = [
+      new THREE.Vector3(start.x * 0.5 + 0.15, start.y + 0.08, start.z + 0.55),
+      new THREE.Vector3(start.x * 0.3 + 0.10, midY + 0.10, 0.60),
+      new THREE.Vector3(end.x * 0.3 + 0.05, end.y + 0.12, 0.55),
+      new THREE.Vector3(end.x * 0.2, end.y + 0.10, 0.50),
+    ];
+    return new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.5);
+  }
+
+  /* Body pathways — offset camera in front and above */
   const pts = pathway.map((p) => {
     const zOff = Math.max(0.8, 1.15 - Math.abs(p.x) * 0.4);
     return new THREE.Vector3(p.x * 0.3, p.y + 0.18, p.z + zOff);
@@ -710,24 +733,43 @@ const CameraRig = ({ controlsRef, activeLobe, activeSensor, resetTrigger }) => {
   /* ── Start follow mode when sensor activates ── */
   useEffect(() => {
     if (!controlsRef.current || !initialised.current) return;
-    if (activeSensor && NERVE_PATHWAYS[activeSensor]?.length >= 2) {
+    if (!activeSensor) return;
+    const pathway = NERVE_PATHWAYS[activeSensor];
+    if (!pathway || pathway.length < 2) return;
+
+    if (isHeadPathway(pathway)) {
+      /* Head sensors: GSAP zoom to sensor area first, camera follow will track */
+      followMode.current = true;
+      killTweens();
+      /* Quick zoom to head region so signal is visible from start */
+      const sensorPos = pathway[0];
+      animateTo(
+        { x: sensorPos.x, y: sensorPos.y, z: sensorPos.z },
+        { x: sensorPos.x * 0.5 + 0.15, y: sensorPos.y + 0.08, z: sensorPos.z + 0.55 },
+        0.6,
+      );
+      /* After initial zoom, enable follow mode (slightly delayed so tween starts) */
+      setTimeout(() => { followMode.current = true; }, 350);
+    } else {
+      /* Body sensors: immediate follow mode */
       followMode.current = true;
       killTweens();
     }
-  }, [activeSensor, killTweens, controlsRef]);
+  }, [activeSensor, killTweens, controlsRef, animateTo]);
 
   /* ── Per-frame camera follow along signal path ── */
   useFrame(() => {
     if (!controlsRef.current || !followMode.current) return;
     if (!SIGNAL_STATE.pathCurve || !SIGNAL_STATE.camCurve) return;
+    if (SIGNAL_STATE.progress <= 0) return; // wait for signal to start
 
-    const p = Math.max(0, Math.min(SIGNAL_STATE.progress, 0.999));
+    const p = Math.max(0.001, Math.min(SIGNAL_STATE.progress, 0.999));
     SIGNAL_STATE.camCurve.getPointAt(p, _tmpCam);
     SIGNAL_STATE.pathCurve.getPointAt(p, _tmpTarget);
 
     /* Dynamic lerp — faster when far, smoother when close */
     const dist = camera.position.distanceTo(_tmpCam);
-    const lerpFactor = Math.min(0.12, Math.max(0.04, dist * 0.07));
+    const lerpFactor = Math.min(0.14, Math.max(0.045, dist * 0.08));
 
     camera.position.lerp(_tmpCam, lerpFactor);
     controlsRef.current.target.lerp(_tmpTarget, lerpFactor);

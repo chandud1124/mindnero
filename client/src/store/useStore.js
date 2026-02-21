@@ -504,7 +504,7 @@ const useStore = create((set, get) => ({
     const isHand = sensor.includes('hand');
     const isSkin = sensor === 'skin';
     const isBody = isLeg || isHand || isSkin;
-    const baseDuration = isLeg ? 2500 / speed : (isHand || isSkin) ? 2200 / speed : 1500 / speed;
+    const baseDuration = isLeg ? 2500 / speed : (isHand || isSkin) ? 2200 / speed : 1800 / speed;
     const baseDelay = 100 / speed;
 
     /* Biological synapse delays (ms) at spinal cord entry and brainstem */
@@ -515,10 +515,11 @@ const useStore = create((set, get) => ({
     const spinalProgress = isLeg ? 0.48 : isHand ? 0.55 : isSkin ? 0.35 : 0;
     const brainProgress  = isLeg ? 0.82 : isHand ? 0.80 : isSkin ? 0.78 : 0;
 
-    /* Time (ms) when signal arrives at the brain — triggers delayed camera zoom */
+    /* Time (ms) when signal arrives at the brain — triggers delayed camera zoom
+       Head sensors need enough time for the signal to visibly flow along cranial nerve */
     const brainArrivalTime = isBody
       ? baseDuration * brainProgress + spinalDelay + baseDelay
-      : baseDelay + 200;
+      : baseDuration * 0.85 + baseDelay;
 
     /* Total wall-clock time including biological delays */
     const totalTime = baseDuration + spinalDelay + cortexDelay + baseDelay;
