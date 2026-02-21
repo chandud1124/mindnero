@@ -203,17 +203,41 @@ void checkTouchSensors() {
 void loop() {
   // Handle WebSocket
   webSocket.loop();
-  
+
   // Check WiFi connection
   if (WiFi.status() != WL_CONNECTED) {
     digitalWrite(LED_WIFI, LOW);
     connectWiFi();
     setupWebSocket();
   }
-  
-  // Check touch sensors
-  checkTouchSensors();
-  
+
+  // Check touch sensors and update LED
+  bool anyActive = false;
+  unsigned long currentTime = millis();
+  for (int i = 0; i < NUM_SENSORS; i++) {
+    int touchValue = touchRead(sensors[i].pin);
+    // Only hands, legs, eye, nose, mouth, ear control LED
+    const char* n = sensors[i].name;
+    bool isMainSensor = (
+      strcmp(n, "right_hand") == 0 || strcmp(n, "left_hand") == 0 ||
+      strcmp(n, "right_leg") == 0 || strcmp(n, "left_leg") == 0 ||
+      strcmp(n, "eye") == 0 || strcmp(n, "nose") == 0 ||
+      strcmp(n, "mouth") == 0 || strcmp(n, "ear") == 0
+    );
+    if (isMainSensor && touchValue < TOUCH_THRESHOLD) {
+      anyActive = true;
+    }
+    // Send sensor event as before
+    if (touchValue < TOUCH_THRESHOLD) {
+      if (currentTime - sensors[i].lastActivation > DEBOUNCE_TIME) {
+        sensors[i].lastActivation = currentTime;
+        Serial.printf("Touch detected: %s (value: %d)\n", n, touchValue);
+        sendSensorData(n);
+      }
+    }
+  }
+  digitalWrite(LED_STATUS, anyActive ? HIGH : LOW);
+
   // Small delay to prevent flooding
   delay(50);
 }
