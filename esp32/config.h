@@ -10,7 +10,7 @@
 #include "secrets.h"
 
 // General firmware configuration
-#define NUM_TOUCH_SENSORS 6
+#define NUM_TOUCH_SENSORS 10
 #define TOUCH_DEBOUNCE_MS 500       // Debounce delay between sensor readings
 #define WDT_TIMEOUT_MS 15000        // 15 seconds watchdog
 #define RECONNECT_DELAY_MS 5000     // 5 seconds between WebSocket reconnect attempts
@@ -28,7 +28,11 @@ typedef enum {
     SENSOR_EYE = 2,
     SENSOR_EAR = 3,
     SENSOR_MOUTH = 4,
-    SENSOR_FOREHEAD = 5
+    SENSOR_FOREHEAD = 5,
+    SENSOR_NOSE = 6,
+    SENSOR_RIGHT_LEG = 7,
+    SENSOR_LEFT_LEG = 8,
+    SENSOR_SKIN = 9
 } SensorType;
 
 // Sensor name strings (must match backend exactly)
@@ -38,7 +42,11 @@ static const char* SENSOR_NAMES[NUM_TOUCH_SENSORS] = {
     "eye",
     "ear",
     "mouth",
-    "forehead"
+    "forehead",
+    "nose",
+    "right_leg",
+    "left_leg",
+    "skin"
 };
 
 // ESP32 Touch Sensor Pins (T0-T9 available on ESP32)
@@ -50,7 +58,11 @@ static const int TOUCH_SENSOR_PINS[NUM_TOUCH_SENSORS] = {
     2,   // T2 - Eye
     15,  // T3 - Ear
     13,  // T4 - Mouth
-    12   // T5 - Forehead
+    12,  // T5 - Forehead
+    14,  // T6 - Nose
+    27,  // T7 - Right Leg
+    33,  // T8 - Left Leg
+    32   // T9 - Skin (chest)
 };
 
 // Touch threshold values (lower = more sensitive)
@@ -66,7 +78,11 @@ static const int LED_PINS[NUM_TOUCH_SENSORS] = {
     18,  // Eye LED
     19,  // Ear LED
     21,  // Mouth LED
-    22   // Forehead LED
+    22,  // Forehead LED
+    23,  // Nose LED
+    25,  // Right Leg LED
+    26,  // Left Leg LED
+    5    // Skin LED
 };
 
 // Status LED for WiFi/WebSocket connection
@@ -90,10 +106,10 @@ static const int LED_PINS[NUM_TOUCH_SENSORS] = {
 #define HEARTBEAT_INTERVAL_MS 30000  // 30 seconds
 
 // GPIO Pin Usage Summary (ESP32):
-// Touch Sensors:  4, 0, 2, 15, 13, 12 (TOUCH INPUT)
-// LED Indicators: 16, 17, 18, 19, 21, 22 (OUTPUT - optional)
+// Touch Sensors:  4, 0, 2, 15, 13, 12, 14, 27, 33, 32 (TOUCH INPUT)
+// LED Indicators: 16, 17, 18, 19, 21, 22, 23, 25, 26, 5 (OUTPUT - optional)
 // Status LED:     2 (OUTPUT - WiFi/WebSocket status - shares with Touch2, disable if needed)
-// Available:      5, 23, 25, 26, 27, 32, 33, 34, 35, 36, 39
+// Available:      34, 35, 36, 39 (input-only)
 
 // Note: GPIO 34-39 are input-only on ESP32
 // Note: Some pins may be used by internal flash/PSRAM, check your board

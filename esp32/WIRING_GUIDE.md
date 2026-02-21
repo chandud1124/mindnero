@@ -5,12 +5,12 @@
 ### Required:
 - 1× ESP32 Development Board (any variant)
 - 1× USB Cable (for programming and power)
-- 6× Touch Sensors OR conductive materials (aluminum foil, copper tape, etc.)
+- 10× Touch Sensors OR conductive materials (aluminum foil, copper tape, etc.)
 - Jumper wires
 
 ### Optional (for visual feedback):
-- 6× LEDs (any color, 3mm or 5mm)
-- 6× 220Ω resistors (for LEDs)
+- 10× LEDs (any color, 3mm or 5mm)
+- 10× 220Ω resistors (for LEDs)
 - 1× Breadboard
 - More jumper wires
 
@@ -27,19 +27,27 @@ ESP32 Board
 │  3V3 ●────────────────────────────┐         │
 │  GND ●──────┬──────┬──────┬───────┼─────┐   │
 │             │      │      │       │     │   │
-│  GPIO 4  ●──┼──────┼──────┼───────┼─────┼─► Touch Sensor 1 (Right Hand)
-│  GPIO 0  ●──┼──────┼──────┼───────┼─────┼─► Touch Sensor 2 (Left Hand)
-│  GPIO 2  ●──┼──────┼──────┼───────┼─────┼─► Touch Sensor 3 (Eye)
-│  GPIO 15 ●──┼──────┼──────┼───────┼─────┼─► Touch Sensor 4 (Ear)
-│  GPIO 13 ●──┼──────┼──────┼───────┼─────┼─► Touch Sensor 5 (Mouth)
-│  GPIO 12 ●──┼──────┼──────┼───────┼─────┼─► Touch Sensor 6 (Forehead)
+│  GPIO 4  ●──┼──────┼──────┼───────┼─────┼─► Touch Sensor 1  (Right Hand)
+│  GPIO 0  ●──┼──────┼──────┼───────┼─────┼─► Touch Sensor 2  (Left Hand)
+│  GPIO 2  ●──┼──────┼──────┼───────┼─────┼─► Touch Sensor 3  (Eye)
+│  GPIO 15 ●──┼──────┼──────┼───────┼─────┼─► Touch Sensor 4  (Ear)
+│  GPIO 13 ●──┼──────┼──────┼───────┼─────┼─► Touch Sensor 5  (Mouth)
+│  GPIO 12 ●──┼──────┼──────┼───────┼─────┼─► Touch Sensor 6  (Forehead)
+│  GPIO 14 ●──┼──────┼──────┼───────┼─────┼─► Touch Sensor 7  (Nose)
+│  GPIO 27 ●──┼──────┼──────┼───────┼─────┼─► Touch Sensor 8  (Right Leg)
+│  GPIO 33 ●──┼──────┼──────┼───────┼─────┼─► Touch Sensor 9  (Left Leg)
+│  GPIO 32 ●──┼──────┼──────┼───────┼─────┼─► Touch Sensor 10 (Skin/Chest)
 │             │      │      │       │     │   │
-│  GPIO 16 ●──┼──────┼──────┼───────┼─────┼─► LED 1 (Right Hand) ──[220Ω]─┐
-│  GPIO 17 ●──┼──────┼──────┼───────┼─────┼─► LED 2 (Left Hand)  ──[220Ω]─┤
-│  GPIO 18 ●──┼──────┼──────┼───────┼─────┼─► LED 3 (Eye)        ──[220Ω]─┤
-│  GPIO 19 ●──┼──────┼──────┼───────┼─────┼─► LED 4 (Ear)        ──[220Ω]─┤
-│  GPIO 21 ●──┼──────┼──────┼───────┼─────┼─► LED 5 (Mouth)      ──[220Ω]─┤
-│  GPIO 22 ●──┼──────┼──────┼───────┼─────┼─► LED 6 (Forehead)   ──[220Ω]─┤
+│  GPIO 16 ●──┼──────┼──────┼───────┼─────┼─► LED 1  (Right Hand) ──[220Ω]─┐
+│  GPIO 17 ●──┼──────┼──────┼───────┼─────┼─► LED 2  (Left Hand)  ──[220Ω]─┤
+│  GPIO 18 ●──┼──────┼──────┼───────┼─────┼─► LED 3  (Eye)        ──[220Ω]─┤
+│  GPIO 19 ●──┼──────┼──────┼───────┼─────┼─► LED 4  (Ear)        ──[220Ω]─┤
+│  GPIO 21 ●──┼──────┼──────┼───────┼─────┼─► LED 5  (Mouth)      ──[220Ω]─┤
+│  GPIO 22 ●──┼──────┼──────┼───────┼─────┼─► LED 6  (Forehead)   ──[220Ω]─┤
+│  GPIO 23 ●──┼──────┼──────┼───────┼─────┼─► LED 7  (Nose)       ──[220Ω]─┤
+│  GPIO 25 ●──┼──────┼──────┼───────┼─────┼─► LED 8  (Right Leg)  ──[220Ω]─┤
+│  GPIO 26 ●──┼──────┼──────┼───────┼─────┼─► LED 9  (Left Leg)   ──[220Ω]─┤
+│  GPIO 5  ●──┼──────┼──────┼───────┼─────┼─► LED 10 (Skin)       ──[220Ω]─┤
 │             │      │      │       │     │                              │
 │             └──────┴──────┴───────┴─────┴──────────────────────────────┘
 │                    (All LEDs cathode to GND)                           │
@@ -60,6 +68,10 @@ ESP32 Board
 | Ear | GPIO 15 | Connect wire/foil |
 | Mouth | GPIO 13 | Connect wire/foil |
 | Forehead | GPIO 12 | Connect wire/foil |
+| Nose | GPIO 14 | Connect wire/foil |
+| Right Leg | GPIO 27 | Connect wire/foil |
+| Left Leg | GPIO 33 | Connect wire/foil |
+| Skin (Chest) | GPIO 32 | Connect wire/foil |
 
 **Important Notes:**
 - Touch sensors don't need to be connected to GND
@@ -77,6 +89,10 @@ ESP32 Board
 | Ear LED | GPIO 19 | Anode → GPIO 19, Cathode → 220Ω resistor → GND |
 | Mouth LED | GPIO 21 | Anode → GPIO 21, Cathode → 220Ω resistor → GND |
 | Forehead LED | GPIO 22 | Anode → GPIO 22, Cathode → 220Ω resistor → GND |
+| Nose LED | GPIO 23 | Anode → GPIO 23, Cathode → 220Ω resistor → GND |
+| Right Leg LED | GPIO 25 | Anode → GPIO 25, Cathode → 220Ω resistor → GND |
+| Left Leg LED | GPIO 26 | Anode → GPIO 26, Cathode → 220Ω resistor → GND |
+| Skin LED | GPIO 5 | Anode → GPIO 5, Cathode → 220Ω resistor → GND |
 
 **LED Wiring:**
 ```

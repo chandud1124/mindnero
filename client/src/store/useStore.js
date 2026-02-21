@@ -84,6 +84,24 @@ export const BRAIN_MAPPING = {
     description:
       'Paracentral lobule — medial surface of primary motor cortex (M1) controlling voluntary movement of the contralateral (left) lower extremity via the lateral corticospinal tract.',
   },
+  nose: {
+    name: 'Olfactory Cortex',
+    lobe: 'Olfactory Cortex (Temporal)',
+    lobeId: 'temporal',
+    hemisphere: 'both',
+    color: LOBE_COLORS.temporal,
+    description:
+      'Olfactory nerve (CN I) — axons of olfactory receptor neurons pass through the cribriform plate to the olfactory bulb, then project via the olfactory tract to the piriform cortex and amygdala.',
+  },
+  skin: {
+    name: 'Somatosensory Cortex',
+    lobe: 'Primary Somatosensory Cortex (S1)',
+    lobeId: 'parietal',
+    hemisphere: 'both',
+    color: LOBE_COLORS.parietal,
+    description:
+      'Cutaneous mechanoreceptors (Meissner, Merkel, Pacinian corpuscles) → dorsal root ganglion → dorsal column–medial lemniscus pathway → VPL nucleus of thalamus → primary somatosensory cortex (S1) in the postcentral gyrus.',
+  },
 };
 
 /* ═══════════════════ Sensor Positions (A-pose body — Sketchfab basemesh) ═══════════════════ */
@@ -96,6 +114,8 @@ export const SENSOR_POSITIONS = {
   forehead:   { x: 0.0, y: 1.62, z: 0.11 },
   right_leg:  { x: 0.26, y: -0.98, z: 0.11 },
   left_leg:   { x: -0.26, y: -0.98, z: 0.11 },
+  nose:       { x: 0.0, y: 1.41, z: 0.14 },
+  skin:       { x: 0.0, y: 0.70, z: 0.16 },
 };
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -192,6 +212,38 @@ export const NERVE_PATHWAYS = {
     { x: 0.00, y: 1.54, z: 0.04 },
     { x: 0.00, y: 1.52, z: 0.06 },
     { x: 0.00, y: 1.51, z: 0.08 },
+  ],
+  /* ── Nose → Olfactory cortex  (CN I → olfactory bulb → piriform cortex) ── */
+  nose: [
+    { x: 0.00, y: 1.41, z: 0.14 },   // nasal epithelium
+    { x: 0.00, y: 1.43, z: 0.12 },   // olfactory filaments
+    { x: 0.00, y: 1.45, z: 0.09 },   // cribriform plate
+    { x: 0.00, y: 1.47, z: 0.06 },   // olfactory bulb
+    { x: 0.00, y: 1.48, z: 0.03 },   // olfactory tract
+    { x: -0.03, y: 1.47, z: 0.01 },  // lateral olfactory stria
+    { x: -0.06, y: 1.46, z: 0.00 },  // amygdala approach
+    { x: -0.09, y: 1.44, z: 0.01 },  // piriform cortex (temporal)
+  ],
+  /* ── Skin (chest) → Primary Somatosensory Cortex (S1)
+     Mechanoreceptors → Intercostal n. → DRG → Dorsal column → Medulla → Thalamus → S1 ── */
+  skin: [
+    { x: 0.00, y: 0.70, z: 0.16 },   // chest surface (mechanoreceptors)
+    { x: 0.02, y: 0.70, z: 0.12 },   // subcutaneous plexus
+    { x: 0.04, y: 0.70, z: 0.06 },   // intercostal nerve (T4)
+    { x: 0.03, y: 0.70, z: 0.00 },   // posterior branch
+    { x: 0.01, y: 0.70, z: -0.02 },  // dorsal root ganglion
+    { x: 0.00, y: 0.70, z: -0.03 },  // dorsal horn — SPINAL CORD ENTRY
+    { x: 0.00, y: 0.80, z: -0.03 },  // ascending dorsal column (T4)
+    { x: 0.00, y: 0.95, z: -0.03 },  // cervical cord
+    { x: 0.00, y: 1.10, z: -0.03 },  // upper cervical
+    { x: 0.00, y: 1.27, z: -0.03 },  // cervicomedullary junction
+    { x: 0.00, y: 1.33, z: -0.03 },  // lower medulla
+    { x: 0.00, y: 1.38, z: -0.02 },  // gracile/cuneate nuclei — DECUSSATION
+    { x: 0.00, y: 1.42, z: -0.01 },  // medial lemniscus
+    { x: 0.00, y: 1.46, z: 0.00 },   // thalamus (VPL nucleus)
+    { x: 0.00, y: 1.50, z: -0.01 },  // thalamocortical radiation
+    { x: 0.00, y: 1.55, z: -0.02 },  // corona radiata
+    { x: 0.00, y: 1.61, z: -0.02 },  // primary somatosensory cortex (S1)
   ],
   /* ── Right leg → Left motor cortex (Paracentral lobule)
      Digital nn. → Tibial n. → Sciatic n. → Sacral plexus → Cauda equina →
@@ -383,6 +435,8 @@ export const NERVE_ANATOMY = {
   trigeminalNerve: { path: [[0.05,1.62,0.07],[0.04,1.58,0.06],[0.03,1.50,0.04],[0.0,1.44,0.01]], radius: 0.002 },
   facialNerve: { path: [[0.04,1.36,0.09],[0.05,1.38,0.06],[0.04,1.37,0.03],[0.0,1.34,0.01]], radius: 0.002 },
   vestibulocochlear: { path: [[-0.10,1.45,0.0],[-0.07,1.43,-0.01],[-0.04,1.41,-0.01],[-0.01,1.39,-0.01]], radius: 0.002 },
+  olfactoryNerve: { path: [[0,1.41,0.13],[0,1.43,0.10],[0,1.45,0.06],[0,1.47,0.03]], radius: 0.002 },
+  olfactoryTract: { path: [[0,1.47,0.03],[-0.02,1.47,0.01],[-0.05,1.46,0.00],[-0.09,1.44,0.01]], radius: 0.0018 },
 
   /* ── Intercostal Nerves (Thoracic spinal branches) ── */
   intercostalT2_R: { path: [[0,1.00,-0.03],[0.04,0.995,-0.015],[0.09,0.99,0.005],[0.15,0.98,0.025],[0.18,0.97,0.03]], radius: 0.002 },
@@ -448,19 +502,21 @@ const useStore = create((set, get) => ({
     /* Slow-motion durations scaled by pathway length */
     const isLeg = sensor.includes('leg');
     const isHand = sensor.includes('hand');
-    const baseDuration = isLeg ? 2500 / speed : isHand ? 2200 / speed : 1500 / speed;
+    const isSkin = sensor === 'skin';
+    const isBody = isLeg || isHand || isSkin;
+    const baseDuration = isLeg ? 2500 / speed : (isHand || isSkin) ? 2200 / speed : 1500 / speed;
     const baseDelay = 100 / speed;
 
     /* Biological synapse delays (ms) at spinal cord entry and brainstem */
-    const spinalDelay = (isLeg || isHand) ? 300 / speed : 0;
-    const cortexDelay = (isLeg || isHand) ? 300 / speed : 0;
+    const spinalDelay = isBody ? 300 / speed : 0;
+    const cortexDelay = isBody ? 300 / speed : 0;
 
     /* Normalized progress markers along the CatmullRomCurve3 */
-    const spinalProgress = isLeg ? 0.48 : isHand ? 0.55 : 0;
-    const brainProgress  = isLeg ? 0.82 : isHand ? 0.80 : 0;
+    const spinalProgress = isLeg ? 0.48 : isHand ? 0.55 : isSkin ? 0.35 : 0;
+    const brainProgress  = isLeg ? 0.82 : isHand ? 0.80 : isSkin ? 0.78 : 0;
 
     /* Time (ms) when signal arrives at the brain — triggers delayed camera zoom */
-    const brainArrivalTime = (isLeg || isHand)
+    const brainArrivalTime = isBody
       ? baseDuration * brainProgress + spinalDelay + baseDelay
       : baseDelay + 200;
 

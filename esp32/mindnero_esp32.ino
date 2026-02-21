@@ -4,13 +4,17 @@
  * This code reads touch sensors connected to ESP32 and sends
  * the activation data to the WebSocket server.
  * 
- * Connections:
+ * Connections (10 sensors using all ESP32 touch-capable pins):
  * - Right Hand: GPIO 4  (Touch0)
- * - Left Hand:  GPIO 2  (Touch2)
- * - Eye:        GPIO 15 (Touch3)
- * - Ear:        GPIO 13 (Touch4)
- * - Mouth:      GPIO 12 (Touch5)
- * - Forehead:   GPIO 14 (Touch6)
+ * - Left Hand:  GPIO 0  (Touch1)
+ * - Eye:        GPIO 2  (Touch2)
+ * - Ear:        GPIO 15 (Touch3)
+ * - Mouth:      GPIO 13 (Touch4)
+ * - Forehead:   GPIO 12 (Touch5)
+ * - Nose:       GPIO 14 (Touch6)
+ * - Right Leg:  GPIO 27 (Touch7)
+ * - Left Leg:   GPIO 33 (Touch8)
+ * - Skin:       GPIO 32 (Touch9)
  */
 
 #include <WiFi.h>
@@ -31,11 +35,15 @@ const int wsPort = 3001;
 
 // Touch pin definitions
 const int TOUCH_RIGHT_HAND = 4;   // T0
-const int TOUCH_LEFT_HAND = 2;    // T2
-const int TOUCH_EYE = 15;         // T3
-const int TOUCH_EAR = 13;         // T4
-const int TOUCH_MOUTH = 12;       // T5
-const int TOUCH_FOREHEAD = 14;    // T6
+const int TOUCH_LEFT_HAND = 0;    // T1
+const int TOUCH_EYE = 2;          // T2
+const int TOUCH_EAR = 15;         // T3
+const int TOUCH_MOUTH = 13;       // T4
+const int TOUCH_FOREHEAD = 12;    // T5
+const int TOUCH_NOSE = 14;        // T6
+const int TOUCH_RIGHT_LEG = 27;   // T7
+const int TOUCH_LEFT_LEG = 33;    // T8
+const int TOUCH_SKIN = 32;        // T9
 
 // Sensor configuration
 struct TouchSensor {
@@ -50,7 +58,11 @@ TouchSensor sensors[] = {
   {TOUCH_EYE, "eye", 0},
   {TOUCH_EAR, "ear", 0},
   {TOUCH_MOUTH, "mouth", 0},
-  {TOUCH_FOREHEAD, "forehead", 0}
+  {TOUCH_FOREHEAD, "forehead", 0},
+  {TOUCH_NOSE, "nose", 0},
+  {TOUCH_RIGHT_LEG, "right_leg", 0},
+  {TOUCH_LEFT_LEG, "left_leg", 0},
+  {TOUCH_SKIN, "skin", 0}
 };
 
 const int NUM_SENSORS = sizeof(sensors) / sizeof(sensors[0]);
@@ -231,11 +243,15 @@ void calibrateSensors() {
  *    ESP32                  Touch Sensors
  *    -----                  -------------
  *    GPIO 4  (T0) --------  Right Hand sensor
- *    GPIO 2  (T2) --------  Left Hand sensor  
- *    GPIO 15 (T3) --------  Eye sensor
- *    GPIO 13 (T4) --------  Ear sensor
- *    GPIO 12 (T5) --------  Mouth sensor
- *    GPIO 14 (T6) --------  Forehead sensor
+ *    GPIO 0  (T1) --------  Left Hand sensor  
+ *    GPIO 2  (T2) --------  Eye sensor
+ *    GPIO 15 (T3) --------  Ear sensor
+ *    GPIO 13 (T4) --------  Mouth sensor
+ *    GPIO 12 (T5) --------  Forehead sensor
+ *    GPIO 14 (T6) --------  Nose sensor
+ *    GPIO 27 (T7) --------  Right Leg sensor
+ *    GPIO 33 (T8) --------  Left Leg sensor
+ *    GPIO 32 (T9) --------  Skin (chest) sensor
  *    
  *    3.3V    ----------------  Sensor VCC (if needed)
  *    GND     ----------------  Sensor GND (if needed)

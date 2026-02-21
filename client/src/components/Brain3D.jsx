@@ -339,7 +339,7 @@ const SegmentedBrain = ({ activeLobe }) => {
       <BrainLobe geometry={frontalGeo} position={[0, 0.03, 0.055]} color={LOBE_COLORS.frontal} active={activeLobe === 'frontal'} />
 
       {/* ── PARIETAL LOBE (green) ── */}
-      <BrainLobe geometry={parietalGeo} position={[0, 0.06, -0.02]} color={LOBE_COLORS.parietal} active={false} />
+      <BrainLobe geometry={parietalGeo} position={[0, 0.06, -0.02]} color={LOBE_COLORS.parietal} active={activeLobe === 'parietal'} />
 
       {/* ── LEFT TEMPORAL LOBE (orange) ── */}
       <BrainLobe geometry={temporalGeo} position={[-0.09, -0.02, 0.015]} color={LOBE_COLORS.temporal} active={activeLobe === 'temporal'} />
@@ -526,12 +526,13 @@ const LOBE_FOCUS = {
   frontal:     { target: { x: 0, y: 1.58, z: 0.08 },      cam: { x: 0,     y: 1.60, z: 0.66 } },
 };
 
-/* ── Body-sensor focus (hands / legs) ── */
+/* ── Body-sensor focus (hands / legs / skin) ── */
 const SENSOR_FOCUS = {
   right_hand: { target: { x: 0.95, y: 0.33, z: 0.22 }, cam: { x: 1.25, y: 0.50, z: 1.10 } },
   left_hand:  { target: { x:-0.95, y: 0.33, z: 0.22 }, cam: { x:-1.25, y: 0.50, z: 1.10 } },
   right_leg:  { target: { x: 0.26, y:-0.55, z: 0.11 }, cam: { x: 0.55, y:-0.30, z: 1.35 } },
   left_leg:   { target: { x:-0.26, y:-0.55, z: 0.11 }, cam: { x:-0.55, y:-0.30, z: 1.35 } },
+  skin:       { target: { x: 0, y: 0.70, z: 0.16 },    cam: { x: 0.40, y: 0.80, z: 1.30 } },
 };
 
 const CameraRig = ({ controlsRef, activeLobe, activeSensor, resetTrigger }) => {
