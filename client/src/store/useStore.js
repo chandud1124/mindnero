@@ -524,7 +524,7 @@ const useStore = create((set, get) => ({
   toggleDarkMode: () => set((s) => ({ darkMode: !s.darkMode })),
   setSkinTransparency: (v) => set({ skinTransparency: Math.min(0.85, Math.max(0.05, Number(v) || 0.2)) }),
   setNeuralSpeed: (v) => set({ neuralSpeed: Math.min(3, Math.max(0.25, Number(v) || 1)) }),
-  resetView: () => set((s) => ({ resetViewTrigger: s.resetViewTrigger + 1, activeLobe: null })),
+  resetView: () => set((s) => ({ resetViewTrigger: s.resetViewTrigger + 1, activeSensor: null, activeLobe: null, activeColor: null, showInfo: false, infoContent: null })),
   hideInfo: () => set({ showInfo: false, infoContent: null }),
 }));
 

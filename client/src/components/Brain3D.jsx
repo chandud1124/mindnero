@@ -503,32 +503,99 @@ const NeuronBurst = ({ activeLobe, activeColor }) => {
   );
 };
 
-/* ═══════════════════ Camera Rig (GSAP) ═══════════════════ */
-const CameraRig = ({ controlsRef, activeLobe, resetTrigger }) => {
+/* ═══════════════════ Camera Rig (GSAP – medical viewer) ═══════════════════
+   • Auto-fits model on first mount
+   • Zooms to body sensor OR brain lobe on activation
+   • Smooth GSAP transitions (1.2-1.8 s)  with power2.inOut
+   • Dynamically updates OrbitControls.target
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Full-body default — computed so the 2.66-unit model fits with 12 % padding
+   at FOV 47 °:  halfH = 2.66/2 * 1.12 = 1.49 → dist = 1.49 / tan(23.5°) ≈ 3.43 */
+const DEFAULT_CAM    = { x: 0, y: 0.35, z: 3.45 };
+const DEFAULT_TARGET = { x: 0, y: 0.35, z: 0 };
+
+/* ── Brain-lobe focus ── */
+const LOBE_FOCUS = {
+  motor_left:  { target: { x: -0.07, y: 1.57, z: 0.02 }, cam: { x: -0.40, y: 1.62, z: 0.70 } },
+  motor_right: { target: { x:  0.07, y: 1.57, z: 0.02 }, cam: { x:  0.40, y: 1.62, z: 0.70 } },
+  parietal:    { target: { x: 0, y: 1.61, z: -0.02 },     cam: { x: 0,     y: 1.65, z: 0.68 } },
+  occipital:   { target: { x: 0, y: 1.54, z: -0.08 },     cam: { x: 0,     y: 1.58, z: 0.65 } },
+  temporal:    { target: { x: -0.09, y: 1.53, z: 0.02 },  cam: { x: -0.50, y: 1.56, z: 0.78 } },
+  broca:       { target: { x: -0.07, y: 1.54, z: 0.05 },  cam: { x: -0.44, y: 1.58, z: 0.72 } },
+  frontal:     { target: { x: 0, y: 1.58, z: 0.08 },      cam: { x: 0,     y: 1.60, z: 0.66 } },
+};
+
+/* ── Body-sensor focus (hands / legs) ── */
+const SENSOR_FOCUS = {
+  right_hand: { target: { x: 0.95, y: 0.33, z: 0.22 }, cam: { x: 1.25, y: 0.50, z: 1.10 } },
+  left_hand:  { target: { x:-0.95, y: 0.33, z: 0.22 }, cam: { x:-1.25, y: 0.50, z: 1.10 } },
+  right_leg:  { target: { x: 0.26, y:-0.55, z: 0.11 }, cam: { x: 0.55, y:-0.30, z: 1.35 } },
+  left_leg:   { target: { x:-0.26, y:-0.55, z: 0.11 }, cam: { x:-0.55, y:-0.30, z: 1.35 } },
+};
+
+const CameraRig = ({ controlsRef, activeLobe, activeSensor, resetTrigger }) => {
   const { camera } = useThree();
-  const DEFAULT_CAM = useMemo(() => ({ x: 0, y: 0.42, z: 2.8 }), []);
-  const DEFAULT_TARGET = useMemo(() => ({ x: 0, y: 0.42, z: 0 }), []);
+  const tweens = useRef([]);
+  const initialised = useRef(false);
 
-  const FOCUS = useMemo(() => ({
-    motor_left:  { target: { x: -0.07, y: 1.57, z: 0.02 }, cam: { x: -0.40, y: 1.62, z: 0.70 } },
-    motor_right: { target: { x: 0.07, y: 1.57, z: 0.02 }, cam: { x: 0.40, y: 1.62, z: 0.70 } },
-    parietal:    { target: { x: 0, y: 1.61, z: -0.02 }, cam: { x: 0, y: 1.65, z: 0.68 } },
-    occipital:   { target: { x: 0, y: 1.54, z: -0.08 }, cam: { x: 0, y: 1.58, z: 0.65 } },
-    temporal:    { target: { x: -0.09, y: 1.53, z: 0.02 }, cam: { x: -0.50, y: 1.56, z: 0.78 } },
-    broca:       { target: { x: -0.07, y: 1.54, z: 0.05 }, cam: { x: -0.44, y: 1.58, z: 0.72 } },
-    frontal:     { target: { x: 0, y: 1.58, z: 0.08 }, cam: { x: 0, y: 1.60, z: 0.66 } },
-  }), []);
+  /* Kill any running tweens */
+  const killTweens = useCallback(() => {
+    tweens.current.forEach((tw) => tw.kill());
+    tweens.current = [];
+  }, []);
 
-  useEffect(() => {
+  /* Shared animate helper — targets both camera.position and controls.target */
+  const animateTo = useCallback((target, cam, duration) => {
     if (!controlsRef.current) return;
-    const dest = activeLobe ? FOCUS[activeLobe] : null;
-    const t = dest?.target || DEFAULT_TARGET;
-    const c = dest?.cam || DEFAULT_CAM;
-    const dur = activeLobe ? 1.5 : 1.2;
-    const tw1 = gsap.to(controlsRef.current.target, { ...t, duration: dur, ease: 'power2.out', onUpdate: () => controlsRef.current?.update() });
-    const tw2 = gsap.to(camera.position, { ...c, duration: dur, ease: 'power2.out', onUpdate: () => controlsRef.current?.update() });
-    return () => { tw1.kill(); tw2.kill(); };
-  }, [activeLobe, resetTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
+    killTweens();
+    const onUpdate = () => controlsRef.current?.update();
+    tweens.current.push(
+      gsap.to(controlsRef.current.target, { ...target, duration, ease: 'power2.inOut', onUpdate }),
+      gsap.to(camera.position, { ...cam, duration, ease: 'power2.inOut', onUpdate }),
+    );
+  }, [camera, controlsRef, killTweens]);
+
+  /* ── Initial auto-fit on mount ── */
+  useEffect(() => {
+    if (initialised.current || !controlsRef.current) return;
+    initialised.current = true;
+    /* Set controls.target and camera to default instantly, then let damping smooth it */
+    controlsRef.current.target.set(DEFAULT_TARGET.x, DEFAULT_TARGET.y, DEFAULT_TARGET.z);
+    camera.position.set(DEFAULT_CAM.x, DEFAULT_CAM.y, DEFAULT_CAM.z);
+    controlsRef.current.update();
+  }, [camera, controlsRef]);
+
+  /* ── React to sensor activation ── */
+  useEffect(() => {
+    if (!controlsRef.current || !initialised.current) return;
+
+    /* Body-part sensors (hands / legs) get priority */
+    const bodyFocus = activeSensor ? SENSOR_FOCUS[activeSensor] : null;
+    if (bodyFocus) {
+      animateTo(bodyFocus.target, bodyFocus.cam, 1.5);
+      return;
+    }
+
+    /* Brain-lobe focus */
+    const lobeFocus = activeLobe ? LOBE_FOCUS[activeLobe] : null;
+    if (lobeFocus) {
+      animateTo(lobeFocus.target, lobeFocus.cam, 1.5);
+      return;
+    }
+
+    /* No active focus — return to full body */
+    animateTo(DEFAULT_TARGET, DEFAULT_CAM, 1.2);
+  }, [activeSensor, activeLobe, animateTo, controlsRef]);
+
+  /* ── Reset button ── */
+  useEffect(() => {
+    if (!controlsRef.current || !initialised.current) return;
+    animateTo(DEFAULT_TARGET, DEFAULT_CAM, 1.2);
+  }, [resetTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* Cleanup on unmount */
+  useEffect(() => () => killTweens(), [killTweens]);
 
   return null;
 };
@@ -673,17 +740,20 @@ const Scene = () => {
 
       <OrbitControls
         ref={controlsRef}
-        enablePan={false}
+        enablePan
+        panSpeed={0.4}
         enableZoom
-        minDistance={0.5}
-        maxDistance={5.0}
-        maxPolarAngle={Math.PI / 1.3}
-        minPolarAngle={Math.PI / 6}
-        target={[0, 0.42, 0]}
+        zoomSpeed={0.8}
+        minDistance={0.35}
+        maxDistance={5.5}
+        maxPolarAngle={Math.PI * 0.88}
+        minPolarAngle={Math.PI * 0.08}
         enableDamping
-        dampingFactor={0.06}
+        dampingFactor={0.08}
+        rotateSpeed={0.5}
+        /* no hardcoded target — CameraRig manages it dynamically */
       />
-      <CameraRig controlsRef={controlsRef} activeLobe={activeLobe} resetTrigger={resetViewTrigger} />
+      <CameraRig controlsRef={controlsRef} activeLobe={activeLobe} activeSensor={activeSensor} resetTrigger={resetViewTrigger} />
     </>
   );
 };
@@ -692,7 +762,7 @@ const Scene = () => {
 const Brain3D = () => (
   <div className="w-full h-full" style={{ position: 'fixed', inset: 0 }}>
     <Canvas
-      camera={{ position: [0, 0.62, 2.3], fov: 47, near: 0.01, far: 50 }}
+      camera={{ position: [0, 0.35, 3.45], fov: 47, near: 0.01, far: 50 }}
       dpr={[1, 1.75]}
       shadows
       gl={{
