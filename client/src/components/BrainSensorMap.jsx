@@ -40,19 +40,20 @@ const BrainSensorMap = () => {
   const activateSensor = useStore((s) => s.activateSensor);
   const darkMode = useStore((s) => s.darkMode);
 
-  const handleActivate = useCallback((sensor) => {
-    activateSensor({ sensor, intensity: 1.0 });
-  }, [activateSensor]);
-
-  const sensors = Object.keys(BRAIN_MAPPING);
-
-  // Swap limb sensor display mapping for UI (vice versa)
+  // When clicking a limb sensor, activate the opposite side
   const LIMB_SWAP = {
     right_hand: 'left_hand',
     left_hand: 'right_hand',
     right_leg: 'left_leg',
     left_leg: 'right_leg',
   };
+  const handleActivate = useCallback((sensor) => {
+    const mapped = SENSOR_META[sensor]?.group === 'limbs' && LIMB_SWAP[sensor] ? LIMB_SWAP[sensor] : sensor;
+    activateSensor({ sensor: mapped, intensity: 1.0 });
+  }, [activateSensor]);
+
+  const sensors = Object.keys(BRAIN_MAPPING);
+
 
   const renderRow = (sensorKey) => {
     let meta = SENSOR_META[sensorKey];
