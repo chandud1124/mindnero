@@ -23,6 +23,19 @@ const ANATOMY = {
 const NERVE_CLR = '#C9A84C';
 const NERVE_ACTIVE_CLR = '#D4A843';
 
+/* ─── Cross-component signal tracking (module-level for useFrame perf) ─── */
+const SIGNAL_STATE = { progress: 0, active: false, pathCurve: null, camCurve: null, impulseId: null };
+
+/* ─── Smooth camera path offset from nerve pathway ─── */
+function computeCameraPath(pathway) {
+  if (!pathway?.length || pathway.length < 2) return null;
+  const pts = pathway.map((p) => {
+    const zOff = Math.max(0.8, 1.15 - Math.abs(p.x) * 0.4);
+    return new THREE.Vector3(p.x * 0.3, p.y + 0.18, p.z + zOff);
+  });
+  return new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.5);
+}
+
 /* ─── Lobe centre positions (brain-local coords) ─── */
 const LOBE_CENTERS = {
   frontal:     [0, 0.03, 0.055],
@@ -383,22 +396,48 @@ const SegmentedBrain = ({ activeLobe }) => {
   );
 };
 
-/* ═══════════════════ Signal Pulse (GSAP animated) ═══════════════════ */
-const SignalPulse = ({ impulse }) => {
-  const ref = useRef();
+/* ═══════════════════ Signal Flow (water-like flowing animation) ═══════════════════ */
+const TRAIL_COUNT = 15;
+
+const SignalFlow = ({ impulse }) => {
+  const headRef = useRef();
+  const glowRef = useRef();
+  const tubeRef = useRef();
+  const trailRefs = useRef([]);
   const prog = useRef({ value: 0 });
 
-  const curve = useMemo(() => {
-    if (!impulse.pathway || impulse.pathway.length < 2) return null;
-    return new THREE.CatmullRomCurve3(
+  /* Nerve pathway curve + "pipe fill" tube geometry */
+  const { curve, tubeGeo, totalIndices, segSize } = useMemo(() => {
+    if (!impulse.pathway || impulse.pathway.length < 2) return {};
+    const c = new THREE.CatmullRomCurve3(
       impulse.pathway.map((p) => new THREE.Vector3(p.x, p.y, p.z)),
       false, 'catmullrom', 0.5,
     );
+    const tubSegs = Math.max(64, impulse.pathway.length * 8);
+    const radSegs = 8;
+    const geo = new THREE.TubeGeometry(c, tubSegs, 0.007, radSegs, false);
+    const ips = radSegs * 6;
+    geo.setDrawRange(0, 0);
+    return { curve: c, tubeGeo: geo, totalIndices: tubSegs * ips, segSize: ips };
   }, [impulse.pathway]);
 
+  /* Camera path for this signal */
+  const camCurve = useMemo(() => {
+    if (!impulse.pathway?.length) return null;
+    return computeCameraPath(impulse.pathway);
+  }, [impulse.pathway]);
+
+  /* GSAP animation — mirrors biological timing with synapse pauses */
   useEffect(() => {
     if (!curve) return;
     prog.current.value = 0;
+
+    /* Publish for CameraRig */
+    SIGNAL_STATE.active = true;
+    SIGNAL_STATE.pathCurve = curve;
+    SIGNAL_STATE.camCurve = camCurve;
+    SIGNAL_STATE.impulseId = impulse.id;
+    SIGNAL_STATE.progress = 0;
 
     const totalDur = impulse.duration / 1000;
     const initDelay = (impulse.delay || 0) / 1000;
@@ -406,41 +445,140 @@ const SignalPulse = ({ impulse }) => {
     const bp = impulse.brainProgress || 0;
     const hasBioDelays = sp > 0 && bp > 0;
 
+    let cleanup;
     if (!hasBioDelays) {
-      /* Head sensors — simple linear tween */
       const tw = gsap.to(prog.current, { value: 1, duration: totalDur, delay: initDelay, ease: 'none' });
-      return () => tw.kill();
+      cleanup = () => tw.kill();
+    } else {
+      const spDelay = (impulse.spinalDelay || 0) / 1000;
+      const cxDelay = (impulse.cortexDelay || 0) / 1000;
+      const tl = gsap.timeline({ delay: initDelay });
+      tl.to(prog.current, { value: sp, duration: totalDur * sp, ease: 'none' });
+      if (spDelay > 0) tl.to({}, { duration: spDelay });
+      tl.to(prog.current, { value: bp, duration: totalDur * (bp - sp), ease: 'none' });
+      if (cxDelay > 0) tl.to({}, { duration: cxDelay });
+      tl.to(prog.current, { value: 1, duration: totalDur * (1 - bp), ease: 'none' });
+      cleanup = () => tl.kill();
     }
 
-    /* Body sensors — GSAP timeline with biological synapse pauses */
-    const spDelay = (impulse.spinalDelay || 0) / 1000;
-    const cxDelay = (impulse.cortexDelay || 0) / 1000;
-    const tl = gsap.timeline({ delay: initDelay });
-    tl.to(prog.current, { value: sp, duration: totalDur * sp, ease: 'none' });
-    if (spDelay > 0) tl.to({}, { duration: spDelay });                        // synapse pause at spinal cord
-    tl.to(prog.current, { value: bp, duration: totalDur * (bp - sp), ease: 'none' });
-    if (cxDelay > 0) tl.to({}, { duration: cxDelay });                        // cortical processing pause
-    tl.to(prog.current, { value: 1, duration: totalDur * (1 - bp), ease: 'none' });
-    return () => tl.kill();
-  }, [curve, impulse.duration, impulse.delay, impulse.id]);
+    return () => {
+      cleanup();
+      if (SIGNAL_STATE.impulseId === impulse.id) {
+        SIGNAL_STATE.active = false;
+        SIGNAL_STATE.progress = 0;
+      }
+    };
+  }, [curve, camCurve, impulse.duration, impulse.delay, impulse.id]);
 
+  /* Per-frame updates — fills tube, moves head + trail */
   useFrame(() => {
-    if (!ref.current || !curve) return;
+    if (!curve) return;
     const v = prog.current.value;
-    if (v <= 0 || v >= 1) { ref.current.visible = false; return; }
-    const pos = curve.getPointAt(v);
-    ref.current.visible = true;
-    ref.current.position.copy(pos);
-    ref.current.scale.setScalar(0.016 + Math.sin(v * Math.PI * 14) * 0.003);
-    ref.current.material.opacity = v > 0.92 ? (1 - v) * 12 : 0.85;
+
+    /* Update shared state for camera follow */
+    if (SIGNAL_STATE.impulseId === impulse.id) {
+      SIGNAL_STATE.progress = v;
+    }
+
+    /* ── Filled tube ("water" that has flowed) ── */
+    if (tubeRef.current && totalIndices > 0) {
+      if (v <= 0) {
+        tubeRef.current.geometry.setDrawRange(0, 0);
+      } else {
+        const filled = Math.ceil((v * totalIndices) / segSize) * segSize;
+        tubeRef.current.geometry.setDrawRange(0, Math.min(filled, totalIndices));
+      }
+    }
+
+    /* ── Head sphere (bright leading edge) ── */
+    if (headRef.current) {
+      if (v <= 0 || v >= 1) {
+        headRef.current.visible = false;
+      } else {
+        const pos = curve.getPointAt(v);
+        headRef.current.visible = true;
+        headRef.current.position.copy(pos);
+        const pulse = 1 + Math.sin(v * Math.PI * 14) * 0.15;
+        headRef.current.scale.setScalar(pulse);
+        headRef.current.material.opacity = v > 0.93 ? (1 - v) * 14 : 0.9;
+      }
+    }
+
+    /* ── Outer glow halo ── */
+    if (glowRef.current) {
+      if (v <= 0 || v >= 1) {
+        glowRef.current.visible = false;
+      } else {
+        const pos = curve.getPointAt(v);
+        glowRef.current.visible = true;
+        glowRef.current.position.copy(pos);
+        const pulse = 1.1 + Math.sin(v * Math.PI * 10) * 0.2;
+        glowRef.current.scale.setScalar(pulse);
+        glowRef.current.material.opacity = v > 0.93 ? (1 - v) * 6 : 0.2;
+      }
+    }
+
+    /* ── Trail particles (fading droplets behind head) ── */
+    const trailSpan = 0.08;
+    for (let i = 0; i < TRAIL_COUNT; i++) {
+      const ref = trailRefs.current[i];
+      if (!ref) continue;
+      const offset = ((i + 1) / TRAIL_COUNT) * trailSpan;
+      const tv = v - offset;
+      if (tv <= 0 || v <= 0 || v >= 1) { ref.visible = false; continue; }
+      const pos = curve.getPointAt(Math.min(tv, 0.999));
+      ref.visible = true;
+      ref.position.copy(pos);
+      const fade = 1 - (i + 1) / TRAIL_COUNT;
+      ref.material.opacity = fade * 0.55 * (v > 0.93 ? (1 - v) * 14 : 1);
+      ref.scale.setScalar(0.6 + fade * 0.5);
+    }
   });
 
   if (!curve) return null;
+  const color = impulse.color || NERVE_ACTIVE_CLR;
+
   return (
-    <mesh ref={ref}>
-      <sphereGeometry args={[0.02, 12, 12]} />
-      <meshBasicMaterial color={impulse.color || NERVE_ACTIVE_CLR} transparent />
-    </mesh>
+    <group>
+      {/* Filled tube — glowing "water" trail */}
+      {tubeGeo && (
+        <mesh ref={tubeRef} geometry={tubeGeo}>
+          <meshStandardMaterial
+            color={color}
+            transparent
+            opacity={0.55}
+            emissive={new THREE.Color(color)}
+            emissiveIntensity={0.6}
+            roughness={0.5}
+            toneMapped
+          />
+        </mesh>
+      )}
+
+      {/* Head — bright white leading sphere */}
+      <mesh ref={headRef} visible={false}>
+        <sphereGeometry args={[0.016, 12, 12]} />
+        <meshBasicMaterial color="#FFFFFF" transparent />
+      </mesh>
+
+      {/* Outer glow — soft colour halo */}
+      <mesh ref={glowRef} visible={false}>
+        <sphereGeometry args={[0.035, 10, 10]} />
+        <meshBasicMaterial color={color} transparent depthWrite={false} />
+      </mesh>
+
+      {/* Trail particles */}
+      {Array.from({ length: TRAIL_COUNT }, (_, i) => (
+        <mesh
+          key={i}
+          ref={(el) => { trailRefs.current[i] = el; }}
+          visible={false}
+        >
+          <sphereGeometry args={[0.007, 8, 8]} />
+          <meshBasicMaterial color={color} transparent depthWrite={false} />
+        </mesh>
+      ))}
+    </group>
   );
 };
 
@@ -539,6 +677,9 @@ const CameraRig = ({ controlsRef, activeLobe, activeSensor, resetTrigger }) => {
   const { camera } = useThree();
   const tweens = useRef([]);
   const initialised = useRef(false);
+  const followMode = useRef(false);
+  const _tmpTarget = useMemo(() => new THREE.Vector3(), []);
+  const _tmpCam = useMemo(() => new THREE.Vector3(), []);
 
   /* Kill any running tweens */
   const killTweens = useCallback(() => {
@@ -561,37 +702,63 @@ const CameraRig = ({ controlsRef, activeLobe, activeSensor, resetTrigger }) => {
   useEffect(() => {
     if (initialised.current || !controlsRef.current) return;
     initialised.current = true;
-    /* Set controls.target and camera to default instantly, then let damping smooth it */
     controlsRef.current.target.set(DEFAULT_TARGET.x, DEFAULT_TARGET.y, DEFAULT_TARGET.z);
     camera.position.set(DEFAULT_CAM.x, DEFAULT_CAM.y, DEFAULT_CAM.z);
     controlsRef.current.update();
   }, [camera, controlsRef]);
 
-  /* ── React to sensor activation ── */
+  /* ── Start follow mode when sensor activates ── */
   useEffect(() => {
     if (!controlsRef.current || !initialised.current) return;
-
-    /* Body-part sensors (hands / legs) get priority */
-    const bodyFocus = activeSensor ? SENSOR_FOCUS[activeSensor] : null;
-    if (bodyFocus) {
-      animateTo(bodyFocus.target, bodyFocus.cam, 1.5);
-      return;
+    if (activeSensor && NERVE_PATHWAYS[activeSensor]?.length >= 2) {
+      followMode.current = true;
+      killTweens();
     }
+  }, [activeSensor, killTweens, controlsRef]);
 
-    /* Brain-lobe focus */
-    const lobeFocus = activeLobe ? LOBE_FOCUS[activeLobe] : null;
-    if (lobeFocus) {
-      animateTo(lobeFocus.target, lobeFocus.cam, 1.5);
-      return;
+  /* ── Per-frame camera follow along signal path ── */
+  useFrame(() => {
+    if (!controlsRef.current || !followMode.current) return;
+    if (!SIGNAL_STATE.pathCurve || !SIGNAL_STATE.camCurve) return;
+
+    const p = Math.max(0, Math.min(SIGNAL_STATE.progress, 0.999));
+    SIGNAL_STATE.camCurve.getPointAt(p, _tmpCam);
+    SIGNAL_STATE.pathCurve.getPointAt(p, _tmpTarget);
+
+    /* Dynamic lerp — faster when far, smoother when close */
+    const dist = camera.position.distanceTo(_tmpCam);
+    const lerpFactor = Math.min(0.12, Math.max(0.04, dist * 0.07));
+
+    camera.position.lerp(_tmpCam, lerpFactor);
+    controlsRef.current.target.lerp(_tmpTarget, lerpFactor);
+    controlsRef.current.update();
+  });
+
+  /* ── Transition to brain lobe when signal arrives ── */
+  useEffect(() => {
+    if (!controlsRef.current || !initialised.current) return;
+    if (activeLobe) {
+      followMode.current = false;
+      const lobeFocus = LOBE_FOCUS[activeLobe];
+      if (lobeFocus) {
+        animateTo(lobeFocus.target, lobeFocus.cam, 1.2);
+      }
     }
+  }, [activeLobe, animateTo, controlsRef]);
 
-    /* No active focus — return to full body */
-    animateTo(DEFAULT_TARGET, DEFAULT_CAM, 1.2);
+  /* ── Return to default when nothing is active ── */
+  useEffect(() => {
+    if (!controlsRef.current || !initialised.current) return;
+    if (!activeSensor && !activeLobe) {
+      followMode.current = false;
+      animateTo(DEFAULT_TARGET, DEFAULT_CAM, 1.2);
+    }
   }, [activeSensor, activeLobe, animateTo, controlsRef]);
 
   /* ── Reset button ── */
   useEffect(() => {
     if (!controlsRef.current || !initialised.current) return;
+    followMode.current = false;
     animateTo(DEFAULT_TARGET, DEFAULT_CAM, 1.2);
   }, [resetTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -734,7 +901,7 @@ const Scene = () => {
       <NeuronBurst activeLobe={activeLobe} activeColor={activeColor} />
 
       {nervousSystemView && neuralImpulses?.map((imp) => (
-        <SignalPulse key={imp.id} impulse={imp} />
+        <SignalFlow key={imp.id} impulse={imp} />
       ))}
 
       <BloomEffect />
