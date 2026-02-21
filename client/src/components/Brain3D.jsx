@@ -701,6 +701,7 @@ const CameraRig = ({ controlsRef, activeLobe, activeSensor, resetTrigger }) => {
   const tweens = useRef([]);
   const initialised = useRef(false);
   const followMode = useRef(false);
+  const userLocked = useRef(false);   // true when user has manually moved the camera
   const _tmpTarget = useMemo(() => new THREE.Vector3(), []);
   const _tmpCam = useMemo(() => new THREE.Vector3(), []);
 
@@ -721,6 +722,15 @@ const CameraRig = ({ controlsRef, activeLobe, activeSensor, resetTrigger }) => {
     );
   }, [camera, controlsRef, killTweens]);
 
+  /* ── Detect manual orbit / zoom / pan → lock camera ── */
+  useEffect(() => {
+    const ctrl = controlsRef.current;
+    if (!ctrl) return;
+    const onStart = () => { userLocked.current = true; followMode.current = false; killTweens(); };
+    ctrl.addEventListener('start', onStart);
+    return () => ctrl.removeEventListener('start', onStart);
+  }, [controlsRef, killTweens]);
+
   /* ── Initial auto-fit on mount ── */
   useEffect(() => {
     if (initialised.current || !controlsRef.current) return;
@@ -730,28 +740,25 @@ const CameraRig = ({ controlsRef, activeLobe, activeSensor, resetTrigger }) => {
     controlsRef.current.update();
   }, [camera, controlsRef]);
 
-  /* ── Start follow mode when sensor activates ── */
+  /* ── Start follow mode when sensor activates (skip if user locked) ── */
   useEffect(() => {
     if (!controlsRef.current || !initialised.current) return;
     if (!activeSensor) return;
+    if (userLocked.current) return; // user manually positioned camera — respect it
     const pathway = NERVE_PATHWAYS[activeSensor];
     if (!pathway || pathway.length < 2) return;
 
     if (isHeadPathway(pathway)) {
-      /* Head sensors: GSAP zoom to sensor area first, camera follow will track */
       followMode.current = true;
       killTweens();
-      /* Quick zoom to head region so signal is visible from start */
       const sensorPos = pathway[0];
       animateTo(
         { x: sensorPos.x, y: sensorPos.y, z: sensorPos.z },
         { x: sensorPos.x * 0.5 + 0.15, y: sensorPos.y + 0.08, z: sensorPos.z + 0.55 },
         0.6,
       );
-      /* After initial zoom, enable follow mode (slightly delayed so tween starts) */
       setTimeout(() => { followMode.current = true; }, 350);
     } else {
-      /* Body sensors: immediate follow mode */
       followMode.current = true;
       killTweens();
     }
@@ -759,15 +766,14 @@ const CameraRig = ({ controlsRef, activeLobe, activeSensor, resetTrigger }) => {
 
   /* ── Per-frame camera follow along signal path ── */
   useFrame(() => {
-    if (!controlsRef.current || !followMode.current) return;
+    if (!controlsRef.current || !followMode.current || userLocked.current) return;
     if (!SIGNAL_STATE.pathCurve || !SIGNAL_STATE.camCurve) return;
-    if (SIGNAL_STATE.progress <= 0) return; // wait for signal to start
+    if (SIGNAL_STATE.progress <= 0) return;
 
     const p = Math.max(0.001, Math.min(SIGNAL_STATE.progress, 0.999));
     SIGNAL_STATE.camCurve.getPointAt(p, _tmpCam);
     SIGNAL_STATE.pathCurve.getPointAt(p, _tmpTarget);
 
-    /* Dynamic lerp — faster when far, smoother when close */
     const dist = camera.position.distanceTo(_tmpCam);
     const lerpFactor = Math.min(0.14, Math.max(0.045, dist * 0.08));
 
@@ -776,9 +782,10 @@ const CameraRig = ({ controlsRef, activeLobe, activeSensor, resetTrigger }) => {
     controlsRef.current.update();
   });
 
-  /* ── Transition to brain lobe when signal arrives ── */
+  /* ── Transition to brain lobe when signal arrives (skip if user locked) ── */
   useEffect(() => {
     if (!controlsRef.current || !initialised.current) return;
+    if (userLocked.current) { followMode.current = false; return; }
     if (activeLobe) {
       followMode.current = false;
       const lobeFocus = LOBE_FOCUS[activeLobe];
@@ -788,18 +795,20 @@ const CameraRig = ({ controlsRef, activeLobe, activeSensor, resetTrigger }) => {
     }
   }, [activeLobe, animateTo, controlsRef]);
 
-  /* ── Return to default when nothing is active ── */
+  /* ── Return to default when nothing is active (skip if user locked) ── */
   useEffect(() => {
     if (!controlsRef.current || !initialised.current) return;
+    if (userLocked.current) { followMode.current = false; return; }
     if (!activeSensor && !activeLobe) {
       followMode.current = false;
       animateTo(DEFAULT_TARGET, DEFAULT_CAM, 1.2);
     }
   }, [activeSensor, activeLobe, animateTo, controlsRef]);
 
-  /* ── Reset button ── */
+  /* ── Reset button — clears user lock and returns to default ── */
   useEffect(() => {
     if (!controlsRef.current || !initialised.current) return;
+    userLocked.current = false;
     followMode.current = false;
     animateTo(DEFAULT_TARGET, DEFAULT_CAM, 1.2);
   }, [resetTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
