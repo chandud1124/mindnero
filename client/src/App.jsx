@@ -4,7 +4,7 @@ import Header from './components/Header';
 import MedicalControls from './components/MedicalControls';
 import ControlPanel from './components/ControlPanel';
 import InfoPopup from './components/InfoPopup';
-import BrainLegend from './components/BrainLegend';
+import BrainSensorMap from './components/BrainSensorMap';
 import ActivityHistory from './components/ActivityHistory';
 import HeartbeatWaveform from './components/HeartbeatWaveform';
 import useWebSocket from './hooks/useWebSocket';
@@ -59,7 +59,7 @@ const App = () => {
       <Header />
       <ControlPanel />
       <InfoPopup />
-      <BrainLegend />
+      <BrainSensorMap />
       <ActivityHistory />
       <HeartbeatWaveform />
       <MedicalControls />
