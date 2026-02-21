@@ -858,12 +858,19 @@ const CLICK_ZONES = Object.entries(SENSOR_POSITIONS).map(([sensor, pos]) => {
   return { sensor, pos: [pos.x, pos.y, pos.z], radius: isLimb ? 0.10 : 0.06 };
 });
 
+/* Left↔Right swap: model faces viewer so anatomical sides are mirrored */
+const CLICK_SWAP = {
+  left_hand: 'right_hand', right_hand: 'left_hand',
+  left_leg:  'right_leg',  right_leg:  'left_leg',
+};
+
 const BodyClickZones = () => {
   const activateSensor = useStore((s) => s.activateSensor);
 
   const handleClick = useCallback((sensor) => (e) => {
     e.stopPropagation();
-    activateSensor({ sensor, intensity: 1.0 });
+    const mapped = CLICK_SWAP[sensor] || sensor;
+    activateSensor({ sensor: mapped, intensity: 1.0 });
   }, [activateSensor]);
 
   return (
