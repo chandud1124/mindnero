@@ -46,9 +46,21 @@ const BrainSensorMap = () => {
 
   const sensors = Object.keys(BRAIN_MAPPING);
 
+  // Swap limb sensor display mapping for UI (vice versa)
+  const LIMB_SWAP = {
+    right_hand: 'left_hand',
+    left_hand: 'right_hand',
+    right_leg: 'left_leg',
+    left_leg: 'right_leg',
+  };
+
   const renderRow = (sensorKey) => {
-    const meta = SENSOR_META[sensorKey];
-    const mapping = BRAIN_MAPPING[sensorKey];
+    let meta = SENSOR_META[sensorKey];
+    let mapping = BRAIN_MAPPING[sensorKey];
+    // For limb sensors, swap the mapping for display
+    if (meta && meta.group === 'limbs' && LIMB_SWAP[sensorKey]) {
+      mapping = BRAIN_MAPPING[LIMB_SWAP[sensorKey]];
+    }
     const isActive = sensorKey === activeSensor;
     if (!meta || !mapping) return null;
 
